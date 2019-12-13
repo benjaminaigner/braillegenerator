@@ -14,7 +14,7 @@ You can render this script in following ways:
 * enable support: If set, 2 additional small cubes are created, to stabilize the backplate while printing
 * text: Enter a text. New lines can be created by entering `\n`. A backslash must be escaped: `\\`
 
-![Rendering of a 3 line braille text with backplate and supportplate](https://github.com/benjaminaigner/braillegenerator/raw/master/img/braille.png "Generated braille label with 3 lines, support- and backplate")
+![Rendering of a 3 line braille text with backplate and supportplate](https://github.com/benjaminaigner/braillegenerator/raw/master/img/braille1.png "Generated braille label with 3 lines, support- and backplate")
 
 ## Acknowledgements
 
