@@ -9,7 +9,7 @@ const plate_thickness = 2;
 const col_size = 3;
 //which braille dialect will be used?
 //Note: only 0 is valid currently (german)
-const brailledialect = 0;
+const brailledialect = 'german';
 
 // Here we define the user editable parameters:
 function getParameterDefinitions() {
@@ -23,7 +23,7 @@ function getParameterDefinitions() {
 // Main entry point; here we construct our solid: 
 function main(params)
 {
-	const braillestr = braille_str(params.text);
+	const braillestr = braille_str(params.text.toLowerCase());
 	var finalobject = braillestr.csg;
 	const width = braillestr.width;
 	const height = braillestr.height;
@@ -66,6 +66,92 @@ function main(params)
 	return finalobject;
 }
 
+
+const brailleMapSingleChar = {
+	'german': {
+		'a': [1,0,0,0,0,0],
+		'b': [1,0,1,0,0,0],
+		'c': [1,1,0,0,0,0],
+		'd': [1,1,0,1,0,0],
+		'e': [1,0,0,1,0,0],
+		'f': [1,1,1,0,0,0],
+		'g': [1,1,1,1,0,0],
+		'h': [1,0,1,1,0,0],
+		'i': [0,1,1,0,0,0],
+		'j': [0,1,1,1,0,0],
+		'k': [1,0,0,0,1,0],
+		'l': [1,0,1,0,1,0],
+		'm': [1,1,0,0,1,0],
+		'n': [1,1,0,1,1,0],
+		'o': [1,0,0,1,1,0],
+		'p': [1,1,1,0,1,0],
+		'q': [1,1,1,1,1,0],
+		'r': [1,0,1,1,1,0],
+		's': [0,1,1,0,1,0],
+		't': [0,1,1,1,1,0],
+		'u': [1,0,0,0,1,1],
+		'v': [1,0,1,1,1,0],
+		'w': [0,1,1,1,0,1],
+		'x': [1,1,0,0,1,1],
+		'y': [1,1,0,1,1,1],
+		'z': [1,0,0,1,1,1],
+		'ü': [1,0,1,1,0,1],
+		'ö': [0,1,1,0,0,1],
+		'ä': [0,1,0,1,1,0],
+		',': [0,0,1,0,0,0],
+		';': [0,0,1,0,1,0],
+		':': [0,0,1,1,0,0],
+		'.': [0,0,0,0,1,0],
+		'!': [0,0,1,1,1,0],
+		'(': [0,0,1,1,1,1],
+		')': [0,0,1,1,1,1],
+		'?': [0,0,1,0,0,1],
+		'-': [0,0,0,0,1,1],
+		'„': [0,0,1,0,1,1],
+		'“': [0,0,0,1,1,1],
+		'‘': [0,0,0,0,0,1],
+		'‘': [0,0,0,0,0,1],
+		'`': [0,0,0,0,0,1],
+		'´': [0,0,0,0,0,1],
+		' ': [0,0,0,0,0,0]
+	}
+};
+
+const brailleMapDigits = {
+	'german': {
+		'start': [0,1,0,1,1,1],
+		'1': [1,0,0,0,0,0],
+		'2': [1,0,1,0,0,0],
+		'3': [1,1,0,0,0,0],
+		'4': [1,1,0,1,0,0],
+		'5': [1,0,0,1,0,0],
+		'6': [1,1,1,0,0,0],
+		'7': [1,1,1,1,0,0],
+		'8': [1,0,1,1,0,0],
+		'9': [0,1,1,0,0,0],
+		'0': [0,1,1,1,0,0]
+	}
+}
+
+const brailleMapDoubleChar = {
+	'german': {
+		'st': [0,1,1,1,1,1],
+		'au': [1,0,0,0,0,1],
+		'eu': [1,0,1,0,0,1],
+		'ei': [1,1,0,0,0,1],
+		'ch': [1,1,0,1,0,1],
+		'äu': [0,1,0,0,1,0],
+		'ie': [0,1,0,0,1,1]
+	}
+};
+
+const brailleMapTripleChar = {
+	'german': {
+		'sch': [1,0,0,1,0,1]
+	}
+};
+
+/*
 const brailleMap = 
 [
     //0 -> German Braille
@@ -125,6 +211,7 @@ const brailleMap =
     
     ]
 ];
+* */
 
 /*++++ NOTHING TO CONFIGURE FROM HERE ++++*/
 
@@ -173,24 +260,74 @@ function letter(bitmap) {
 	return csg.union(dots);
 }
 
+//source:
+//https://stackoverflow.com/questions/1098040/checking-if-a-key-exists-in-a-javascript-object
+function isKeyInObject(obj, key) {
+    return res = Object.keys(obj).some(v => v == key);
+}
+
 //find the offset in the braille dots array for a given substring
 //this function will determine if the beginning of the given string
 //is located in the braille array. There might be a combination of more
 //than one character, so we return here:
-//[offset of the braille dots,count of "consumed" characters]
-//parameters: line
-function finddots(line) {
-	var retval = [0,0];
-	for(arrayoffset = 0; arrayoffset < brailleMap[brailledialect].length; arrayoffset++)
+//[count of "consumed" characters, array of braille dots array]
+//parameters: line currently used string
+//prev_char previous character
+function finddots(line, prev_char) {
+	var retval = [0,[]];
+	
+	//0.) test if previous character was a number
+	if(isKeyInObject(brailleMapDigits[brailledialect],prev_char))
 	{
-		//check if the string starts with the currently tested character/character combination
-		if(line.indexOf(brailleMap[brailledialect][arrayoffset][0]) == 0)
+		//if yes, push a space character to separate digits/letters
+		retval[1].push([0,0,0,0,0,0]);
+	}
+	
+	//1.) detect if we have a 3character braille letter
+	if(isKeyInObject(brailleMapTripleChar[brailledialect],line.substr(0,3)))
+	{	
+		retval[0] = 3;
+		retval[1].push(brailleMapTripleChar[brailledialect][line.substr(0,3)]);
+		return retval;
+	}
+
+	//2.) detect if we have a 2character braille letter
+	if(isKeyInObject(brailleMapDoubleChar[brailledialect],line.substr(0,2)))
+	{
+		retval[0] = 2;
+		retval[1].push(brailleMapDoubleChar[brailledialect][line.substr(0,2)]);
+		return retval;
+	}
+	
+	//3.) detect if we have a single character braille letter
+	if(isKeyInObject(brailleMapSingleChar[brailledialect],line.substr(0,1)))
+	{
+		retval[0] = 1;
+		retval[1].push(brailleMapSingleChar[brailledialect][line.substr(0,1)]);
+		return retval;
+	}
+	
+	//4.) detect if we enter the number mode
+	if(isKeyInObject(brailleMapDigits[brailledialect],line.substr(0,1)))
+	{
+		//because we pushed a space character at the beginning for exiting
+		//number mode, we need to clear the return array here.
+		retval[1] = [];
+		
+		//we have a digit now...
+		//test if previous character was a digit too.
+		//if yes, just return the current braille map
+		if(isKeyInObject(brailleMapDigits[brailledialect],prev_char))
 		{
-			retval[0] = arrayoffset;
-			retval[1] = brailleMap[brailledialect][arrayoffset][0].length;
-			console.log("found " + brailleMap[brailledialect][arrayoffset][0] + " len: " + retval[1] + " arr offset: " + retval[0]);
-			return retval;
+			retval[0] = 1;
+			retval[1].push(brailleMapDigits[brailledialect][line.substr(0,1)]);
+		} else {
+			//if not, start with the digit start symbol.
+			retval[0] = 1;
+			retval[1].push(brailleMapDigits[brailledialect]['start']);
+			retval[1].push(brailleMapDigits[brailledialect][line.substr(0,1)]);
 		}
+		return retval;
 	}
 	
 	//if nothing found:
@@ -209,22 +346,21 @@ function braille_line(line) {
 	var chararr = [];
 	
 	do {
-		var retval = finddots(line.substr(char_count));
+		//find all necessary braille characters (dot maps)
+		//we need the previous character as well, to detect if we need a
+		// number start braille character
+		if(char_count != 0) var retval = finddots(line.substr(char_count),line[char_count-1]);
+		else var retval = finddots(line.substr(char_count)," ");
 		if(retval[0] != -1)
 		{
-			//we found a character (combination)
-			char_count += retval[1];
-			//create a letter CSG object, with the given braille map:
-			//dialect -> offset determined by finddots -> offset 1 (braille dots)
-			var brletter = letter(brailleMap[brailledialect][retval[0]][1]);
-			//translate in Y axis and push to CSG array
-			chararr.push(brletter.translate([0,braille_count*distance, 0]));
-			//we have one more braille symbol
-			braille_count++;
-		} else {
-			//if no valid character is found, go to next one
-			char_count++;
-		}
+			for(var i = 0; i<retval[1].length; i++) 
+			{
+				chararr.push(letter(retval[1][i]).translate([0,braille_count*distance,0]))
+				braille_count++;
+			}
+			char_count += retval[0];
+		//if no valid character is found, go to next one
+		} else char_count++;
 	//iterate until each character is done
 	} while(char_count < line.length);
 	
@@ -264,4 +400,3 @@ function braille_str(text)
 		height: plate_height * textarr.length,
 	};
 }
-
