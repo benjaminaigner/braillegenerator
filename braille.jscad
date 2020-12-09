@@ -14,9 +14,9 @@ const brailledialect = 'german';
 // Here we define the user editable parameters:
 function getParameterDefinitions() {
   return [
-    { name: 'supportPlate', caption: 'Nutze eine Support Platte für leichteres Drucken:', type: 'bool', default: true },
-    { name: 'backPlate', caption: 'Drucke Braille auf einer 2mm Platte:', type: 'bool', default: true },
-    { name: 'text', caption: 'Braille Text:', type: 'longtext', default: "Willkommen bei der\nWissensdrehscheibe für\nbarrierefreie Technologie" },
+    { name: 'supportPlate', caption: 'Nutze eine Support Platte für leichteres Drucken', type: 'bool', default: true },
+    { name: 'backPlate', caption: 'Drucke Braille auf einer 2mm Platte', type: 'bool', default: true },
+    { name: 'text', caption: 'Braille Text', type: 'longtext', default: "Willkommen bei der\nWissensdrehscheibe für\nbarrierefreie Technologie" },
   ];
 }
 
