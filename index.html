@@ -56,33 +56,33 @@ brailleGenerator.gProcessor = null;
 // Show all exceptions to the user:
 OpenJsCad.AlertUserOfUncaughtExceptions();
 
-function onload()
+brailleGenerator.onload = function()
 {
     brailleGenerator.gProcessor = new OpenJsCad.Processor(document.getElementById("viewer"));
-  getBraille('braille.jscad');
-  updateSolid();
+    brailleGenerator.getBraille('braille.jscad');
+    brailleGenerator.updateSolid();
 }
 
-function updateSolid()
+brailleGenerator.updateSolid = function()
 {
     brailleGenerator.gProcessor.setJsCad(document.getElementById('code').value);
 }
 
 
 
-function getExample(name) {
+brailleGenerator.getExample = function(name) {
   var el = document.getElementById('code');
   $.get(brailleGenerator.BASE_PATH_PREFIX + 'examples/' + name, function(data) {
     el.value = data;
-    updateSolid();
+    brailleGenerator.updateSolid();
   });
 }
 
-function getBraille(name) {
+brailleGenerator.getBraille = function(name) {
   var el = document.getElementById('code');
   $.get(brailleGenerator.BASE_PATH_PREFIX + name, function(data) {
     el.value = data;
-    updateSolid();
+      brailleGenerator.updateSolid();
   });
 }
 
@@ -90,7 +90,7 @@ function getBraille(name) {
 
 <title>Braille Generator</title>  
 </head>
-<body onload="onload()">
+<body onload="brailleGenerator.onload()">
   <h1>Braille Generator f&uuml;r Schilder & Labels</h1>
 Mit diesem Braille Generator k&ouml;nnen beliebige Texte in Braille Zeichen
 umgewandelt werden. <br><br>
