@@ -257,9 +257,9 @@ OpenJsCad.Viewer.prototype = {
     handleResize: function() {
         var hIsRatio = typeof this.size.height != 'string';
         // apply css, then check px size. This is in case css is not in px
-        this.canvas.style.width = this.size.width;
+        //this.canvas.style.width = this.size.width;
         if (!hIsRatio) {
-            this.canvas.style.height = this.size.height;
+            //this.canvas.style.height = this.size.height;
         }
         var widthInPx = this.canvas.clientWidth;
         var heightInPx = hIsRatio ?
@@ -752,15 +752,16 @@ OpenJsCad.Processor.prototype = {
     this.statusspan = document.createElement("span");
     this.statusbuttons = document.createElement("div");
     this.statusbuttons.style.float = "right";
+    this.statusdiv.innerHTML = "Status: ";
     this.statusdiv.appendChild(this.statusspan);
     this.statusdiv.appendChild(this.statusbuttons);
     this.statusdiv.appendChild(this.controldiv);
     this.abortbutton = document.createElement("button");
-    this.abortbutton.innerHTML = "Abbrechen";
+    this.abortbutton.innerHTML = "Berechnung abbrechen";
     this.abortbutton.onclick = function(e) {
       that.abort();
     };
-    this.statusbuttons.appendChild(this.abortbutton);
+    //this.statusbuttons.appendChild(this.abortbutton);
 
     this.renderedElementDropdown = document.createElement("select");
     this.renderedElementDropdown.onchange = function(e) {
@@ -774,33 +775,37 @@ OpenJsCad.Processor.prototype = {
       that.currentFormat = that.formatDropdown.options[that.formatDropdown.selectedIndex].value;
       that.updateDownloadLink();
     };
-    this.statusbuttons.appendChild(this.formatDropdown);
-    this.generateOutputFileButton = document.createElement("button");
-    this.generateOutputFileButton.onclick = function(e) {
-      that.generateOutputFile();
-    };
-    this.statusbuttons.appendChild(this.generateOutputFileButton);
+    //this.statusbuttons.appendChild(this.formatDropdown);
+    this.generateOutputFileButtons = [];
+    //this.statusbuttons.appendChild(this.generateOutputFileButton);
     this.downloadOutputFileLink = document.createElement("a");
+    this.downloadOutputFileLink.id = 'downloadOutputFileLink';
     this.statusbuttons.appendChild(this.downloadOutputFileLink);
     this.parametersdiv = document.createElement("div");
     this.parametersdiv.className = "parametersdiv";
-    var headerdiv = document.createElement("div");
-    headerdiv.textContent = "Parameter:";
+    var headerdiv = document.createElement("h2");
+    headerdiv.textContent = "Parameter";
     headerdiv.className = "header";
     this.parametersdiv.appendChild(headerdiv);
     this.parameterslist = document.createElement("ul");
     this.parameterslist.className = "parameterslist";
     this.parametersdiv.appendChild(this.parameterslist);
     var parseParametersButton = document.createElement("button");
-    parseParametersButton.innerHTML = "Aktualisieren";
+    parseParametersButton.innerHTML = "3D Modell aktualisieren";
     parseParametersButton.onclick = function(e) {
       that.rebuildSolid();
     };
-    this.parametersdiv.appendChild(parseParametersButton);
+    this.actionsdiv = document.createElement("div");
+    var actionsheader = document.createElement("h2");
+    actionsheader.textContent = "Aktionen";
+      this.actionsdiv.appendChild(actionsheader);
+      this.actionsdiv.appendChild(this.abortbutton);
+      this.actionsdiv.appendChild(parseParametersButton);
     this.enableItems();
     this.containerdiv.appendChild(this.statusdiv);
     this.containerdiv.appendChild(this.errordiv);
-    this.containerdiv.appendChild(this.parametersdiv);
+      this.containerdiv.appendChild(this.actionsdiv);
+      this.containerdiv.appendChild(this.parametersdiv);
     this.clearViewer();
   },
 
@@ -894,11 +899,24 @@ OpenJsCad.Processor.prototype = {
       this.viewer.setCsg(csg, this.isFirstRender_);
       this.hasValidCurrentObject = true;
 
+      var that = this;
+        this.generateOutputFileButtons.forEach(function(button) {
+            that.actionsdiv.removeChild(button);
+        });
+        this.generateOutputFileButtons = [];
       this.supportedFormatsForCurrentObject().forEach(function(format) {
         var option = document.createElement("option");
         option.setAttribute("value", format);
         option.appendChild(document.createTextNode(this.formatInfo(format).displayName));
         this.formatDropdown.options.add(option);
+          var generateOutputFileButton = document.createElement("button");
+          generateOutputFileButton.innerHTML = format.toUpperCase() + " Datei herunterladen"
+          generateOutputFileButton.onclick = function(e) {
+              that.currentFormat = JSON.parse(JSON.stringify(format));
+              that.generateOutputFile();
+          };
+          this.generateOutputFileButtons.push(generateOutputFileButton);
+          this.actionsdiv.appendChild(generateOutputFileButton);
       }, this);
 
       this.updateDownloadLink();
@@ -912,7 +930,7 @@ OpenJsCad.Processor.prototype = {
   },
   
   selectedFormat: function() {
-    return this.formatDropdown.options[this.formatDropdown.selectedIndex].value;
+    return this.currentFormat; //this.formatDropdown.options[this.formatDropdown.selectedIndex].value;
   },
 
   selectedFormatInfo: function() {
@@ -920,8 +938,8 @@ OpenJsCad.Processor.prototype = {
   },
   
   updateDownloadLink: function() {
-    var ext = this.selectedFormatInfo().extension;
-    this.generateOutputFileButton.innerHTML = ext.toUpperCase() + " generieren";
+    /*var ext = this.selectedFormatInfo().extension;
+    this.generateOutputFileButton.innerHTML = ext.toUpperCase() + " generieren";*/
   },
   
   clearViewer: function() {
@@ -944,10 +962,13 @@ OpenJsCad.Processor.prototype = {
   },
   
   enableItems: function() {
-    this.abortbutton.style.display = this.processing? "inline":"none";
-    this.formatDropdown.style.display = ((!this.hasOutputFile)&&(this.hasValidCurrentObject))? "inline":"none";
-    this.generateOutputFileButton.style.display = ((!this.hasOutputFile)&&(this.hasValidCurrentObject))? "inline":"none";
-    this.downloadOutputFileLink.style.display = this.hasOutputFile? "inline":"none";
+    var that = this;
+      this.abortbutton.disabled = !this.processing;
+    this.formatDropdown.style.display = (this.hasValidCurrentObject) ? "inline" : "none";
+      this.generateOutputFileButtons.forEach(function (button) {
+          button.disabled = !that.hasValidCurrentObject;
+      });
+    this.downloadOutputFileLink.style.display = 'none'; //this.hasOutputFile? "inline":"none";
     this.parametersdiv.style.display = (this.paramControls.length > 0)? "block":"none";
     this.errordiv.style.display = this.hasError? "block":"none";
     this.statusdiv.style.display = this.hasError? "none":"block";
@@ -1228,6 +1249,7 @@ OpenJsCad.Processor.prototype = {
     var ext = this.selectedFormatInfo().extension;
     this.downloadOutputFileLink.setAttribute("download", "openjscad."+ext);
     this.enableItems();
+    document.getElementById('downloadOutputFileLink').click(); //Auto-download
     if(this.onchange) this.onchange();
   },
 
@@ -1253,6 +1275,7 @@ OpenJsCad.Processor.prototype = {
                       that.downloadOutputFileLink.type = that.selectedFormatInfo().mimetype;
                       that.downloadOutputFileLink.innerHTML = that.downloadLinkTextForCurrentObject();
                       that.downloadOutputFileLink.setAttribute("download", fileEntry.name);
+                      document.getElementById('downloadOutputFileLink').click(); //Auto-download
                       that.enableItems();
                       if(that.onchange) that.onchange();
                     };
