@@ -1,120 +1,16 @@
 <!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
 
-<html><head>
-  <meta http-equiv="content-type" content="text/html; charset=utf-8">
-  <style>
+    <link rel="stylesheet" href="openjscad.css" type="text/css">
 
-body {
-  font: 14px/20px 'Helvetica Neue Light', HelveticaNeue-Light, 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  max-width: 820px;
-  margin: 0 auto;
-  padding: 10px;
-}
-
-pre, code, textarea {
-  font: 12px/20px Monaco, monospace;
-  border: 1px solid #CCC;
-  border-radius: 3px;
-  background: #F9F9F9;
-  padding: 0 3px;
-  color: #555;
-}
-pre, textarea {
-  padding: 10px;
-  width: 100%;
-}
-textarea {
-  height: 200px;
-}
-textarea:focus {
-  outline: none;
-}
-
-canvas { cursor: move; }
-
-  </style>
-<link rel="stylesheet" href="openjscad.css" type="text/css">
-
-<script>
-
-var brailleGenerator = {};
-brailleGenerator.BASE_PATH_PREFIX = '';
-//brailleGenerator.BASE_PATH_PREFIX = 'fileadmin/wbt-template/braillegen/';
-brailleGenerator.gProcessor = null;
-
-brailleGenerator.loadScripts = function () {
-    return brailleGenerator.importExternalScript(brailleGenerator.BASE_PATH_PREFIX + 'lib/three.min.js').then(function () {
-        return brailleGenerator.importExternalScript(brailleGenerator.BASE_PATH_PREFIX + 'lib/orbitcontrols.js');
-    }).then(function () {
-        return brailleGenerator.importExternalScript(brailleGenerator.BASE_PATH_PREFIX + 'lib/projector.js');
-    }).then(function () {
-        return brailleGenerator.importExternalScript(brailleGenerator.BASE_PATH_PREFIX + 'lib/canvasrenderer.js');
-    }).then(function () {
-        return brailleGenerator.importExternalScript(brailleGenerator.BASE_PATH_PREFIX + 'lib/jquery-2.1.3.min.js');
-    }).then(function () {
-        return brailleGenerator.importExternalScript(brailleGenerator.BASE_PATH_PREFIX + 'src/csg.js');
-    }).then(function () {
-        return brailleGenerator.importExternalScript(brailleGenerator.BASE_PATH_PREFIX + 'src/threecsg.js');
-    }).then(function () {
-        return brailleGenerator.importExternalScript(brailleGenerator.BASE_PATH_PREFIX + 'src/openjscad.js');
-    }).then(function () {
-        return brailleGenerator.importExternalScript(brailleGenerator.BASE_PATH_PREFIX + 'src/formats.js');
-    });
-}
-
-brailleGenerator.onload = function()
-{
-    brailleGenerator.loadScripts().then(function () {
-        // Show all exceptions to the user:
-        OpenJsCad.AlertUserOfUncaughtExceptions();
-        brailleGenerator.gProcessor = new OpenJsCad.Processor(document.getElementById("viewer"));
-        brailleGenerator.getBraille('braille.jscad');
-        brailleGenerator.updateSolid();
-    });
-}
-
-brailleGenerator.updateSolid = function()
-{
-    brailleGenerator.gProcessor.setJsCad(document.getElementById('code').value);
-}
-
-
-
-brailleGenerator.getExample = function(name) {
-  var el = document.getElementById('code');
-  $.get(brailleGenerator.BASE_PATH_PREFIX + 'examples/' + name, function(data) {
-    el.value = data;
-    brailleGenerator.updateSolid();
-  });
-}
-
-brailleGenerator.getBraille = function(name) {
-  var el = document.getElementById('code');
-  $.get(brailleGenerator.BASE_PATH_PREFIX + name, function(data) {
-    el.value = data;
-      brailleGenerator.updateSolid();
-  });
-}
-
-// see https://stackoverflow.com/questions/54781242/using-dynamic-import-to-fetch-script-from-another-host
-brailleGenerator.importExternalScript = function(url) {
-    return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = url;
-        script.async = true;
-        script.onload = () => resolve(window['external_global_component']);
-        script.onerror = reject;
-
-        document.body.appendChild(script);
-    });
-}
-
-</script>
-
-<title>Braille Generator</title>  
+    <title>Braille Generator</title>
 </head>
-<body onload="brailleGenerator.onload()">
-  <h1>Braille Generator f&uuml;r Schilder & Labels</h1>
+<body>
+
+
+<h1>Braille Generator f&uuml;r Schilder & Labels</h1>
 Mit diesem Braille Generator k&ouml;nnen beliebige Texte in Braille Zeichen
 umgewandelt werden. <br><br>
 Diese Braillezeichen k&ouml;nnen als STL Datei f&uuml;r den 3D Drucker exportiert werden.
@@ -143,24 +39,134 @@ Mit Ausnahme der braille.jscad Datei, welche der GPL Lizenz unterliegt, ist dies
 Urheber der Quelldateien f&uuml;r dieses Projekt: <br> <br>
 
 OpenJsCad is developed by <a href="https://github.com/joostn">Joost Nieuwenhuijse</a>.
-Based on <a href="https://github.com/evanw/csg.js">initial CSG.js</a> copyright (c) 2011 <a href="https://github.com/evanw">Evan Wallace</a>.
-Uses <a href="https://github.com/evanw/lightgl.js">lightgl.js</a> by <a href="https://github.com/evanw">Evan Wallace</a> 
-and <a href="https://github.com/toaarnio">Tomi Aarnio</a> for WebGL rendering. 
-Contributions by <a href="https://github.com/alx">Alexandre Girard</a>, 
- <a href="https://github.com/tlrobinson">Tom Robinson</a>,
- <a href="https://github.com/jboecker">jboecker</a>,
- <a href="https://github.com/risacher">risacher</a>,
- <a href="https://github.com/tedbeer">tedbeer</a>,
- <a href="https://github.com/bebbi">bebbi</a>,
- <a href="https://github.com/sahilshekhawat">Sahil Shekhawat</a>.
+Based on <a href="https://github.com/evanw/csg.js">initial CSG.js</a> copyright (c) 2011 <a
+        href="https://github.com/evanw">Evan Wallace</a>.
+Uses <a href="https://github.com/evanw/lightgl.js">lightgl.js</a> by <a href="https://github.com/evanw">Evan Wallace</a>
+and <a href="https://github.com/toaarnio">Tomi Aarnio</a> for WebGL rendering.
+Contributions by <a href="https://github.com/alx">Alexandre Girard</a>,
+<a href="https://github.com/tlrobinson">Tom Robinson</a>,
+<a href="https://github.com/jboecker">jboecker</a>,
+<a href="https://github.com/risacher">risacher</a>,
+<a href="https://github.com/tedbeer">tedbeer</a>,
+<a href="https://github.com/bebbi">bebbi</a>,
+<a href="https://github.com/sahilshekhawat">Sahil Shekhawat</a>.
 All code released under MIT license.
 <br><br>
 Contributions are welcome! It's all written in Javascript, so if you know how to use it you
 know how to modify it as well.
 To contribute go to <a href="https://github.com/joostn/OpenJsCad/tree/gh-pages">OpenJsCad at GitHub (gh-pages tree)</a>,
-<a href="http://help.github.com/fork-a-repo/">create your own fork</a> and 
-<a href="http://help.github.com/send-pull-requests/">send me a pull request</a>. Note that the code is maintained 
+<a href="http://help.github.com/fork-a-repo/">create your own fork</a> and
+<a href="http://help.github.com/send-pull-requests/">send me a pull request</a>. Note that the code is maintained
 in the gh-pages branch, not the master branch. This is so that it can be accessed directly via Github pages.
 <textarea id="code" style="width:0px; height:0px;"></textarea>
+
+<style>
+    /*body {
+      font: 14px/20px 'Helvetica Neue Light', HelveticaNeue-Light, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 10px;
+    }*/
+
+    pre, code, textarea {
+        font: 12px/20px Monaco, monospace;
+        border: 1px solid #CCC;
+        border-radius: 3px;
+        background: #F9F9F9;
+        padding: 0 3px;
+        color: #555;
+    }
+
+    pre, textarea {
+        padding: 10px;
+        width: 100%;
+    }
+
+    textarea {
+        height: 200px;
+    }
+
+    textarea:focus {
+        outline: none;
+    }
+
+    canvas {
+        cursor: move;
+    }
+</style>
+
+<script>
+    var brailleGenerator = {};
+    brailleGenerator.BASE_PATH_PREFIX = '';
+    //brailleGenerator.BASE_PATH_PREFIX = 'fileadmin/wbt-template/braillegen/';
+    brailleGenerator.gProcessor = null;
+
+    brailleGenerator.loadScripts = function () {
+        return brailleGenerator.importExternalScript(brailleGenerator.BASE_PATH_PREFIX + 'lib/three.min.js').then(function () {
+            return brailleGenerator.importExternalScript(brailleGenerator.BASE_PATH_PREFIX + 'lib/orbitcontrols.js');
+        }).then(function () {
+            return brailleGenerator.importExternalScript(brailleGenerator.BASE_PATH_PREFIX + 'lib/projector.js');
+        }).then(function () {
+            return brailleGenerator.importExternalScript(brailleGenerator.BASE_PATH_PREFIX + 'lib/canvasrenderer.js');
+        }).then(function () {
+            return brailleGenerator.importExternalScript(brailleGenerator.BASE_PATH_PREFIX + 'lib/jquery-2.1.3.min.js');
+        }).then(function () {
+            return brailleGenerator.importExternalScript(brailleGenerator.BASE_PATH_PREFIX + 'src/csg.js');
+        }).then(function () {
+            return brailleGenerator.importExternalScript(brailleGenerator.BASE_PATH_PREFIX + 'src/threecsg.js');
+        }).then(function () {
+            return brailleGenerator.importExternalScript(brailleGenerator.BASE_PATH_PREFIX + 'src/openjscad.js');
+        }).then(function () {
+            return brailleGenerator.importExternalScript(brailleGenerator.BASE_PATH_PREFIX + 'src/formats.js');
+        });
+    }
+
+    brailleGenerator.start = function () {
+        brailleGenerator.loadScripts().then(function () {
+            // Show all exceptions to the user:
+            OpenJsCad.AlertUserOfUncaughtExceptions();
+            brailleGenerator.gProcessor = new OpenJsCad.Processor(document.getElementById("viewer"));
+            brailleGenerator.getBraille('braille.jscad');
+            brailleGenerator.updateSolid();
+        });
+    }
+
+    brailleGenerator.updateSolid = function () {
+        brailleGenerator.gProcessor.setJsCad(document.getElementById('code').value);
+    }
+
+
+    brailleGenerator.getExample = function (name) {
+        var el = document.getElementById('code');
+        $.get(brailleGenerator.BASE_PATH_PREFIX + 'examples/' + name, function (data) {
+            el.value = data;
+            brailleGenerator.updateSolid();
+        });
+    }
+
+    brailleGenerator.getBraille = function (name) {
+        var el = document.getElementById('code');
+        $.get(brailleGenerator.BASE_PATH_PREFIX + name, function (data) {
+            el.value = data;
+            brailleGenerator.updateSolid();
+        });
+    }
+
+    // see https://stackoverflow.com/questions/54781242/using-dynamic-import-to-fetch-script-from-another-host
+    brailleGenerator.importExternalScript = function (url) {
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = url;
+            script.async = true;
+            script.onload = () => resolve(window['external_global_component']);
+            script.onerror = reject;
+
+            document.body.appendChild(script);
+        });
+    }
+
+    brailleGenerator.start();
+</script>
+
 </body>
 </html>
