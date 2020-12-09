@@ -735,6 +735,7 @@ OpenJsCad.Processor.prototype = {
     this.statusdiv.className = "statusdiv";
     // surface/line draw
     this.controldiv = document.createElement("div");
+    this.controldiv.style.display = 'none';
     var this_ = this;
     [['faces', 'surfaces', this.options.drawFaces],
      ['lines', 'lines', this.options.drawLines]].forEach(function(tup) {
@@ -755,7 +756,7 @@ OpenJsCad.Processor.prototype = {
     this.statusdiv.appendChild(this.statusbuttons);
     this.statusdiv.appendChild(this.controldiv);
     this.abortbutton = document.createElement("button");
-    this.abortbutton.innerHTML = "Abort";
+    this.abortbutton.innerHTML = "Abbrechen";
     this.abortbutton.onclick = function(e) {
       that.abort();
     };
@@ -784,14 +785,14 @@ OpenJsCad.Processor.prototype = {
     this.parametersdiv = document.createElement("div");
     this.parametersdiv.className = "parametersdiv";
     var headerdiv = document.createElement("div");
-    headerdiv.textContent = "Parameters:";
+    headerdiv.textContent = "Parameter:";
     headerdiv.className = "header";
     this.parametersdiv.appendChild(headerdiv);
-    this.parameterstable = document.createElement("table");
-    this.parameterstable.className = "parameterstable";
-    this.parametersdiv.appendChild(this.parameterstable);
+    this.parameterslist = document.createElement("ul");
+    this.parameterslist.className = "parameterslist";
+    this.parametersdiv.appendChild(this.parameterslist);
     var parseParametersButton = document.createElement("button");
-    parseParametersButton.innerHTML = "Update";
+    parseParametersButton.innerHTML = "Aktualisieren";
     parseParametersButton.onclick = function(e) {
       that.rebuildSolid();
     };
@@ -920,7 +921,7 @@ OpenJsCad.Processor.prototype = {
   
   updateDownloadLink: function() {
     var ext = this.selectedFormatInfo().extension;
-    this.generateOutputFileButton.innerHTML = "Generate "+ext.toUpperCase();
+    this.generateOutputFileButton.innerHTML = ext.toUpperCase() + " generieren";
   },
   
   clearViewer: function() {
@@ -935,7 +936,7 @@ OpenJsCad.Processor.prototype = {
     {
       //todo: abort
       this.processing=false;
-      this.statusspan.innerHTML = "Aborted.";
+      this.statusspan.innerHTML = "Aktion abgebrochen.";
       this.worker.terminate();
       this.enableItems();
       if(this.onchange) this.onchange();
@@ -993,7 +994,7 @@ OpenJsCad.Processor.prototype = {
     catch(e)
     {
       this.setError(e.toString());
-      this.statusspan.innerHTML = "Error.";
+      this.statusspan.innerHTML = "Fehler.";
       scripthaserrors = true;
     }
     if(!scripthaserrors)
@@ -1061,7 +1062,7 @@ OpenJsCad.Processor.prototype = {
     this.setError("");
     this.clearViewer();
     this.processing = true;
-    this.statusspan.innerHTML = "Processing, please wait...";
+    this.statusspan.innerHTML = "Berechnung läuft, bitte warten...";
     this.enableItems();
     var that = this;
     var paramValues = this.getParamValues();
@@ -1078,15 +1079,15 @@ OpenJsCad.Processor.prototype = {
         if(err)
         {
           that.setError(err);
-          that.statusspan.innerHTML = "Error.";
+          that.statusspan.innerHTML = "Fehler.";
         }
         else
         {
           that.setRenderedObjects(obj);
           var currentTime = Date.now();
           var elapsed = (currentTime - startTime);
-          that.statusspan.innerHTML = "Ready." + (that.options.verbose ?
-              "  Rendered in " + elapsed + "ms" : "");
+          that.statusspan.innerHTML = "Fertig." + (that.options.verbose ?
+              "  Die Berechnung dauerte " + elapsed + "ms" : "");
         }
         that.enableItems();
         if(that.onchange) that.onchange();
@@ -1099,7 +1100,7 @@ OpenJsCad.Processor.prototype = {
         var obj = OpenJsCad.parseJsCadScriptSync(this.script, paramValues, this.debugging);
         that.setRenderedObjects(obj);
         that.processing = false;
-        that.statusspan.innerHTML = "Ready.";
+        that.statusspan.innerHTML = "Fertig.";
       }
       catch(e)
       {
@@ -1110,7 +1111,7 @@ OpenJsCad.Processor.prototype = {
           errtxt += '\nStack trace:\n'+e.stack;
         }
         that.setError(errtxt);
-        that.statusspan.innerHTML = "Error.";
+        that.statusspan.innerHTML = "Fehler.";
       }
       that.enableItems();
       if(that.onchange) that.onchange();
@@ -1213,7 +1214,7 @@ OpenJsCad.Processor.prototype = {
 
   downloadLinkTextForCurrentObject: function() {
     var ext = this.selectedFormatInfo().extension;
-    return "Download "+ext.toUpperCase();
+    return ext.toUpperCase() + " herunterladen";
   },
 
   generateOutputFileBlobUrl: function() {
@@ -1275,7 +1276,7 @@ OpenJsCad.Processor.prototype = {
   },
   
   createParamControls: function() {
-    this.parameterstable.innerHTML = "";
+    this.parameterslist.innerHTML = "";
     this.paramControls = [];
     var paramControls = [];
     var tablerows = [];
@@ -1397,28 +1398,33 @@ OpenJsCad.Processor.prototype = {
         }
       }
       paramControls.push(control);
-      var tr = document.createElement("tr");
-      var td = document.createElement("td");
-      var label = paramdef.name + ":";
+      var li = document.createElement("li");
+      var labelElem = document.createElement("label");
+      control.id = Math.random().toString(16).slice(2);
+      labelElem.htmlFor = control.id;
+      var label = paramdef.name;
       if('caption' in paramdef)
       {
         label = paramdef.caption;
       }
       if('visible' in paramdef)
       {
-        tr.style.display = (paramdef.visible) ? "table-row" : "none";
+        li.style.display = (paramdef.visible) ? "block" : "none";
       }
-       
-      td.innerHTML = label;
-      tr.appendChild(td);
-      td = document.createElement("td");
-      td.appendChild(control);
-      tr.appendChild(td);
-      tablerows.push(tr);
+
+      labelElem.innerHTML = label;
+        if (control.type === "checkbox") {
+            li.appendChild(control);
+            li.appendChild(labelElem);
+        } else {
+            li.appendChild(labelElem);
+            li.appendChild(control);
+        }
+      tablerows.push(li);
     }
     var that = this;
     tablerows.map(function(tr){
-      that.parameterstable.appendChild(tr);
+      that.parameterslist.appendChild(tr);
     });
     this.paramControls = paramControls;
   },
