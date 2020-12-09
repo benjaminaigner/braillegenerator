@@ -48,28 +48,31 @@ canvas { cursor: move; }
 
 <script>
 
-var gProcessor=null;
+var brailleGenerator = {};
+brailleGenerator.BASE_PATH_PREFIX = '';
+//brailleGenerator.BASE_PATH_PREFIX = 'fileadmin/wbt-template/braillegen/';
+brailleGenerator.gProcessor = null;
 
 // Show all exceptions to the user:
 OpenJsCad.AlertUserOfUncaughtExceptions();
 
 function onload()
 {
-  gProcessor = new OpenJsCad.Processor(document.getElementById("viewer"));
+    brailleGenerator.gProcessor = new OpenJsCad.Processor(document.getElementById("viewer"));
   getBraille('braille.jscad');
   updateSolid();
 }
 
 function updateSolid()
 {
-  gProcessor.setJsCad(document.getElementById('code').value);
+    brailleGenerator.gProcessor.setJsCad(document.getElementById('code').value);
 }
 
 
 
 function getExample(name) {
   var el = document.getElementById('code');
-  $.get('examples/' + name, function(data) {
+  $.get(brailleGenerator.BASE_PATH_PREFIX + 'examples/' + name, function(data) {
     el.value = data;
     updateSolid();
   });
@@ -77,7 +80,7 @@ function getExample(name) {
 
 function getBraille(name) {
   var el = document.getElementById('code');
-  $.get(name, function(data) {
+  $.get(brailleGenerator.BASE_PATH_PREFIX + name, function(data) {
     el.value = data;
     updateSolid();
   });
