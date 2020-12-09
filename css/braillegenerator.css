@@ -1,0 +1,27 @@
+#braillegenerator pre, #braillegenerator code, #braillegenerator textarea {
+    font: 12px/20px Monaco, monospace;
+    border: 1px solid #CCC;
+    border-radius: 3px;
+    background: #F9F9F9;
+    padding: 0 3px;
+    color: #555;
+}
+
+#braillegenerator pre, #braillegenerator textarea {
+    padding: 10px;
+    width: 100%;
+}
+
+#braillegenerator textarea {
+    height: 200px;
+}
+
+#braillegenerator textarea:focus {
+    outline: none;
+}
+
+#braillegenerator canvas {
+    cursor: move;
+    width: 100% !important;
+    margin: 0.5em 0 !important;
+}
