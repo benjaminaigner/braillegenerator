@@ -507,8 +507,6 @@ OpenJsCad.parseJsCadScriptASync = function(script, mainParameters, options, call
   workerscript += "}},false);\n";
     
   var blobURL = OpenJsCad.textToBlobUrl(workerscript);
-  console.log(workerscript);
-  console.log(blobURL);
   
   if(!window.Worker) throw new Error("Your browser doesn't support Web Workers. Please try the Chrome browser instead.");
   var worker = new Worker(blobURL);
