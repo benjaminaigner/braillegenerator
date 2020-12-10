@@ -500,12 +500,13 @@ OpenJsCad.parseJsCadScriptASync = function(script, mainParameters, options, call
   workerscript += "var _csg_makeAbsoluteURL=" + OpenJsCad.makeAbsoluteUrl.toString()+";\n";
   workerscript += "_csg_baselibraries = _csg_baselibraries.map(function(l){return _csg_makeAbsoluteURL(l,_csg_openjscadurl);});\n";
   workerscript += "_csg_libraries = _csg_libraries.map(function(l){return _csg_makeAbsoluteURL(l,_csg_baseurl);});\n";
-  workerscript += "_csg_baselibraries.map(function(l){importScripts(l)});\n";
-  workerscript += "_csg_libraries.map(function(l){importScripts(l)});\n";
+  //workerscript += "_csg_baselibraries.map(function(l){importScripts(l)});\n";
+  //workerscript += "_csg_libraries.map(function(l){importScripts(l)});\n";
+  workerscript += "importScripts.apply(null, _csg_baselibraries.concat(_csg_libraries));\n";
   workerscript += "self.addEventListener('message', function(e) {if(e.data && e.data.cmd == 'render'){";
   workerscript += "  OpenJsCad.runMainInWorker("+JSON.stringify(mainParameters)+");";
   workerscript += "}},false);\n";
-    
+
   var blobURL = OpenJsCad.textToBlobUrl(workerscript);
   
   if(!window.Worker) throw new Error("Your browser doesn't support Web Workers. Please try the Chrome browser instead.");
