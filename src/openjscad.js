@@ -109,6 +109,7 @@ OpenJsCad.Viewer.prototype = {
         this.canvas.remove();
       }
       this.canvas = renderer.domElement;
+      this.canvas.setAttribute('aria-label', '3D Ansicht des generierten Braille Labels');
       this.containerElm_.appendChild(this.canvas);
       // scene.fog = new THREE.FogExp2( 0xcccccc, 0.002 )
       renderer.setClearColor(this.bgColor_);
@@ -1095,7 +1096,7 @@ OpenJsCad.Processor.prototype = {
           var currentTime = Date.now();
           var elapsed = (currentTime - startTime);
           that.statusspan.innerHTML = "Fertig." + (that.options.verbose ?
-              "  Die Berechnung dauerte " + elapsed + "ms" : "");
+              "  Die Berechnung dauerte " + elapsed + " Millisekunden" : "");
         }
         that.enableItems();
         if(that.onchange) that.onchange();
