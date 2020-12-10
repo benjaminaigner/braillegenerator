@@ -473,8 +473,8 @@ OpenJsCad.parseJsCadScriptSync = function(script, mainParameters, debugging) {
 // callback: should be function(error, csg)
 OpenJsCad.parseJsCadScriptASync = function(script, mainParameters, options, callback) {
   var baselibraries = [
-    "src/csg.js",
-    "src/openjscad.js"
+    "csg.js",
+    "openjscad.js"
   ];
 
   var baseurl = location.href.substring(0, location.href.lastIndexOf("/") + 1) + brailleGenerator.BASE_PATH_PREFIX;
@@ -489,28 +489,9 @@ OpenJsCad.parseJsCadScriptASync = function(script, mainParameters, options, call
   if (typeof options['libraries'] != 'undefined') {
     libraries = options['libraries'];
   }
-
-  var workerscript = "";
-  workerscript += script;
-  workerscript += "\n\n\n\n//// The following code is added by OpenJsCad:\n";
-  workerscript += "var _csg_baselibraries=" + JSON.stringify(baselibraries)+";\n";
-  workerscript += "var _csg_libraries=" + JSON.stringify(libraries)+";\n";
-  workerscript += "var _csg_baseurl=" + JSON.stringify(baseurl)+";\n";
-  workerscript += "var _csg_openjscadurl=" + JSON.stringify(openjscadurl)+";\n";
-  workerscript += "var _csg_makeAbsoluteURL=" + OpenJsCad.makeAbsoluteUrl.toString()+";\n";
-  workerscript += "_csg_baselibraries = _csg_baselibraries.map(function(l){return _csg_makeAbsoluteURL(l,_csg_openjscadurl);});\n";
-  workerscript += "_csg_libraries = _csg_libraries.map(function(l){return _csg_makeAbsoluteURL(l,_csg_baseurl);});\n";
-  //workerscript += "_csg_baselibraries.map(function(l){importScripts(l)});\n";
-  //workerscript += "_csg_libraries.map(function(l){importScripts(l)});\n";
-  workerscript += "importScripts.apply(null, _csg_baselibraries.concat(_csg_libraries));\n";
-  workerscript += "self.addEventListener('message', function(e) {if(e.data && e.data.cmd == 'render'){";
-  workerscript += "  OpenJsCad.runMainInWorker("+JSON.stringify(mainParameters)+");";
-  workerscript += "}},false);\n";
-
-  var blobURL = OpenJsCad.textToBlobUrl(workerscript);
   
   if(!window.Worker) throw new Error("Your browser doesn't support Web Workers. Please try the Chrome browser instead.");
-  var worker = new Worker(blobURL);
+  var worker = new Worker(baseurl + 'src/worker.js');
   worker.onmessage = function(e) {
     if(e.data)
     {
@@ -535,7 +516,12 @@ OpenJsCad.parseJsCadScriptASync = function(script, mainParameters, options, call
     callback(errtxt, null);
   };
   worker.postMessage({
-    cmd: "render"
+    cmd: "render",
+      baselibraries: baselibraries,
+      libraries: libraries,
+      baseUrl: baseurl,
+      script: script,
+      parameters: mainParameters
   }); // Start the worker.
   return worker;
 };
