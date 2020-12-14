@@ -478,7 +478,7 @@ OpenJsCad.parseJsCadScriptASync = function(script, mainParameters, options, call
     "openjscad.js"
   ];
 
-  var baseurl = location.href.substring(0, location.href.lastIndexOf("/") + 1) + brailleGenerator.BASE_PATH_PREFIX;
+  var baseurl = brailleGenerator.BASE_PATH_PREFIX;
   var openjscadurl = baseurl;
   if (typeof options['openJsCadPath'] != 'undefined') {
     // trailing '/' indicates it is a folder. This is necessary because makeAbsoluteUrl is called
