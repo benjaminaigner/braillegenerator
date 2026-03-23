@@ -14,23 +14,65 @@ const brailledialect = 'german';
 // Here we define the user editable parameters:
 function getParameterDefinitions() {
   return [
-    { name: 'supportPlate', caption: 'Nutze eine Support Platte für leichteres Drucken:', type: 'bool', default: true },
-    { name: 'backPlate', caption: 'Drucke Braille auf einer 2mm Platte:', type: 'bool', default: true },
     { name: 'text', caption: 'Braille Text:', type: 'longtext', default: "Willkommen bei der\nWissensdrehscheibe für\nbarrierefreie Technologie" },
+    { name: 'pageSize', caption: 'Seitengröße:', type: 'choice', options: ['Custom', 'A5', 'A6', 'A7', 'B5'], default: 'Custom' },
+    { name: 'customWidth', caption: 'Breite (mm) - wenn Custom:', type: 'float', default: 100 },
+    { name: 'customHeight', caption: 'Höhe (mm) - wenn Custom:', type: 'float', default: 150 },
+    { name: 'backPlate', caption: 'Drucke Braille auf einer 2mm Platte:', type: 'bool', default: true },
+    { name: 'supportPlate', caption: 'Nutze eine Support Platte für leichteres Drucken:', type: 'bool', default: true },
   ];
 }
+
+// Page size definitions in mm [width, height]
+const pageSizes = {
+  'A5': [148, 210],
+  'A6': [105, 148],
+  'A7': [74, 105],
+  'B5': [176, 250],
+  'Custom': [100, 150]
+};
 
 // Main entry point; here we construct our solid: 
 function main(params)
 {
+	// Determine the target dimensions based on page size
+	var targetWidth, targetHeight;
+	if (params.pageSize === 'Custom') {
+		targetWidth = params.customWidth;
+		targetHeight = params.customHeight;
+	} else {
+		var sizeArray = pageSizes[params.pageSize];
+		targetWidth = sizeArray[0];
+		targetHeight = sizeArray[1];
+	}
+	
 	const braillestr = braille_str(params.text.toLowerCase());
 	var finalobject = braillestr.csg;
 	const width = braillestr.width;
 	const height = braillestr.height;
 	
+	// Calculate scale factors to fit content within target dimensions
+	// Adding 5mm margin on all sides
+	const marginX = 5;
+	const marginY = 5;
+	const maxContentWidth = targetWidth - (2 * marginX);
+	const maxContentHeight = targetHeight - (2 * marginY);
+	
+	const scaleX = maxContentWidth / width;
+	const scaleY = maxContentHeight / height;
+	const scale = Math.min(scaleX, scaleY, 1); // Don't upscale if content is smaller
+	
+	// Apply scaling and translate to center with margin
+	finalobject = finalobject.scale([scale, scale, 1]);
+	const scaledWidth = width * scale;
+	const scaledHeight = height * scale;
+	const offsetX = (targetWidth - scaledWidth) / 2;
+	const offsetY = (targetHeight - scaledHeight) / 2;
+	finalobject = finalobject.translate([offsetX, offsetY, 0]);
+	
 	var backplate = new CSG.cube({
-		center: [height/2,width/2,-plate_thickness/2],
-		radius: [height/2,width/2,plate_thickness/2],
+		center: [targetWidth/2, targetHeight/2, -plate_thickness/2],
+		radius: [targetWidth/2, targetHeight/2, plate_thickness/2],
 	});
 	backplate = backplate.setColor([0.4,0.4,0,0.8]);
 	
@@ -43,20 +85,18 @@ function main(params)
 		if(params.supportPlate == true)
 		{
 			var support = new CSG.cube({
-				center: [height-1,5,-10],
-				radius: [1,2.5,10],
+				center: [targetWidth-1, 5, -10],
+				radius: [1, 2.5, 10],
 			});
 			support = support.setColor([0.4,0.4,0,0.8]);
 			finalobject = finalobject.union(support);
 			
 			support = new CSG.cube({
-				center: [height-1,width-5,-10],
-				radius: [1,2.5,10],
+				center: [targetWidth-1, targetHeight-5, -10],
+				radius: [1, 2.5, 10],
 			});
 			support = support.setColor([0.4,0.4,0,0.8]);
 			finalobject = finalobject.union(support);
-			
-			
 		}
 	} else {
 		finalobject = finalobject.subtract(backplate);

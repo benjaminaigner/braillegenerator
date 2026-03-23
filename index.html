@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Braille Plate Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 30px;
+        }
+
+        .panel {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        textarea, input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus, input[type="text"]:focus, input[type="number"]:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .size-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .size-input {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-generate {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-generate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-generate:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-download {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-download:hover:not(:disabled) {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-download:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #canvas {
+            width: 100%;
+            height: 500px;
+            background: #f5f5f5;
+            border-radius: 5px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            font-weight: 500;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            display: block;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top-color: #667eea;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .preview-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+
+        .preview-info h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .info-line {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            font-size: 0.95em;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+
+            header h1 {
+                font-size: 1.8em;
+            }
+
+            #canvas {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎨 Braille Plate Generator</h1>
+            <p>Create custom 3D braille plates for printing</p>
+        </header>
+
+        <div class="content">
+            <!-- Left Panel: Input Form -->
+            <div class="panel">
+                <h2>Configuration</h2>
+
+                <div class="form-group">
+                    <label for="textInput">Braille Text:</label>
+                    <textarea id="textInput" placeholder="Enter text to convert to braille...">Willkommen bei der
+Wissensdrehscheibe für
+barrierefreie Technologie</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="pageSize">Page Size:</label>
+                    <select id="pageSize">
+                        <option value="Custom">Custom</option>
+                        <option value="A5">A5 (148 x 210 mm)</option>
+                        <option value="A6">A6 (105 x 148 mm)</option>
+                        <option value="A7">A7 (74 x 105 mm)</option>
+                        <option value="B5">B5 (176 x 250 mm)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Dimensions (mm):</label>
+                    <div class="size-options">
+                        <div class="size-input">
+                            <label for="customWidth" style="font-size: 0.85em; margin-bottom: 5px;">Width:</label>
+                            <input type="number" id="customWidth" value="100" min="50" max="300" step="5">
+                        </div>
+                        <div class="size-input">
+                            <label for="customHeight" style="font-size: 0.85em; margin-bottom: 5px;">Height:</label>
+                            <input type="number" id="customHeight" value="150" min="50" max="300" step="5">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="backPlate" checked>
+                        <label for="backPlate" style="margin: 0;">Include Back Plate (2mm)</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="supportPlate" checked>
+                        <label for="supportPlate" style="margin: 0;">Include Support Plates</label>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn-generate" id="generateBtn" onclick="generateBraille()">
+                        Generate 3D Model
+                    </button>
+                    <button class="btn-download" id="downloadBtn" disabled onclick="downloadSTL()">
+                        ⬇ Download STL
+                    </button>
+                </div>
+
+                <div class="status" id="status"></div>
+
+                <div class="preview-info" id="previewInfo" style="display: none;">
+                    <h3>Model Information</h3>
+                    <div class="info-line">
+                        <span>Status:</span>
+                        <span id="infoStatus">Ready</span>
+                    </div>
+                    <div class="info-line">
+                        <span>Vertices:</span>
+                        <span id="infoVertices">0</span>
+                    </div>
+                    <div class="info-line">
+                        <span>File Size:</span>
+                        <span id="infoSize">0 bytes</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: 3D Preview -->
+            <div class="panel">
+                <h2>3D Preview</h2>
+                <canvas id="canvas"></canvas>
+                <p style="margin-top: 10px; color: #666; font-size: 0.9em;">
+                    💡 Tip: Drag to rotate, scroll to zoom
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- THREE.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- STL Exporter -->
+    <script>
+        // STL Exporter (embedded for compatibility)
+        class STLExporter {
+            parse(geometry) {
+                const vertices = geometry.attributes.position.array;
+                const indices = geometry.index ? geometry.index.array : null;
+
+                let triangles = [];
+
+                if (indices) {
+                    for (let i = 0; i < indices.length; i += 3) {
+                        const a = indices[i];
+                        const b = indices[i + 1];
+                        const c = indices[i + 2];
+                        triangles.push([
+                            [vertices[a * 3], vertices[a * 3 + 1], vertices[a * 3 + 2]],
+                            [vertices[b * 3], vertices[b * 3 + 1], vertices[b * 3 + 2]],
+                            [vertices[c * 3], vertices[c * 3 + 1], vertices[c * 3 + 2]]
+                        ]);
+                    }
+                } else {
+                    for (let i = 0; i < vertices.length; i += 9) {
+                        triangles.push([
+                            [vertices[i], vertices[i + 1], vertices[i + 2]],
+                            [vertices[i + 3], vertices[i + 4], vertices[i + 5]],
+                            [vertices[i + 6], vertices[i + 7], vertices[i + 8]]
+                        ]);
+                    }
+                }
+
+                return this.trianglesToSTL(triangles);
+            }
+
+            trianglesToSTL(triangles) {
+                let stl = new ArrayBuffer(80 + 4 + triangles.length * 50);
+                let view = new DataView(stl);
+                
+                // Header
+                this.setString(view, 0, 'Binary STL file generated by Braille Generator');
+
+                // Number of triangles
+                view.setUint32(80, triangles.length, true);
+
+                let offset = 84;
+                for (let tri of triangles) {
+                    const v1 = tri[0];
+                    const v2 = tri[1];
+                    const v3 = tri[2];
+
+                    // Calculate normal
+                    const n = this.calculateNormal(v1, v2, v3);
+
+                    view.setFloat32(offset, n[0], true);
+                    view.setFloat32(offset + 4, n[1], true);
+                    view.setFloat32(offset + 8, n[2], true);
+                    offset += 12;
+
+                    view.setFloat32(offset, v1[0], true);
+                    view.setFloat32(offset + 4, v1[1], true);
+                    view.setFloat32(offset + 8, v1[2], true);
+                    offset += 12;
+
+                    view.setFloat32(offset, v2[0], true);
+                    view.setFloat32(offset + 4, v2[1], true);
+                    view.setFloat32(offset + 8, v2[2], true);
+                    offset += 12;
+
+                    view.setFloat32(offset, v3[0], true);
+                    view.setFloat32(offset + 4, v3[1], true);
+                    view.setFloat32(offset + 8, v3[2], true);
+                    offset += 12;
+
+                    view.setUint16(offset, 0, true);
+                    offset += 2;
+                }
+
+                return stl;
+            }
+
+            calculateNormal(v1, v2, v3) {
+                const ax = v2[0] - v1[0];
+                const ay = v2[1] - v1[1];
+                const az = v2[2] - v1[2];
+
+                const bx = v3[0] - v1[0];
+                const by = v3[1] - v1[1];
+                const bz = v3[2] - v1[2];
+
+                const nx = ay * bz - az * by;
+                const ny = az * bx - ax * bz;
+                const nz = ax * by - ay * bx;
+
+                const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
+                return [nx / len, ny / len, nz / len];
+            }
+
+            setString(view, offset, str) {
+                for (let i = 0; i < str.length && i < 80; i++) {
+                    view.setUint8(offset + i, str.charCodeAt(i));
+                }
+            }
+        }
+    </script>
+
+    <!-- Braille Generator Script -->
+    <script>
+        let scene, camera, renderer, brailleModel;
+        const pageSizes = {
+            'A5': [148, 210],
+            'A6': [105, 148],
+            'A7': [74, 105],
+            'B5': [176, 250],
+            'Custom': [100, 150]
+        };
+
+        function initThreeJS() {
+            camera = new THREE.PerspectiveCamera(
+                75,
+                document.getElementById('canvas').clientWidth / document.getElementById('canvas').clientHeight,
+                0.1,
+                1000
+            );
+            camera.position.z = 100;
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf5f5f5);
+
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas'), antialias: true });
+            renderer.setSize(
+                document.getElementById('canvas').clientWidth,
+                document.getElementById('canvas').clientHeight
+            );
+            renderer.setPixelRatio(window.devicePixelRatio);
+
+            // Lighting
+            const light1 = new THREE.DirectionalLight(0xffffff, 0.8);
+            light1.position.set(10, 10, 10);
+            scene.add(light1);
+
+            const light2 = new THREE.DirectionalLight(0xffffff, 0.4);
+            light2.position.set(-10, -10, -10);
+            scene.add(light2);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+
+            // Mouse controls
+            setupMouseControls();
+            animate();
+        }
+
+        function setupMouseControls() {
+            let isDragging = false;
+            let previousMousePosition = { x: 0, y: 0 };
+
+            document.getElementById('canvas').addEventListener('mousedown', (e) => {
+                isDragging = true;
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            });
+
+            document.getElementById('canvas').addEventListener('mousemove', (e) => {
+                if (isDragging && brailleModel) {
+                    const deltaX = e.clientX - previousMousePosition.x;
+                    const deltaY = e.clientY - previousMousePosition.y;
+
+                    brailleModel.rotation.y += deltaX * 0.01;
+                    brailleModel.rotation.x += deltaY * 0.01;
+
+                    previousMousePosition = { x: e.clientX, y: e.clientY };
+                }
+            });
+
+            document.getElementById('canvas').addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+
+            document.getElementById('canvas').addEventListener('wheel', (e) => {
+                e.preventDefault();
+                if (camera) {
+                    camera.position.z += e.deltaY * 0.1;
+                    camera.position.z = Math.max(50, Math.min(300, camera.position.z));
+                }
+            });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+
+        function showStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = 'status ' + type;
+        }
+
+        function generateBraille() {
+            const text = document.getElementById('textInput').value;
+            const pageSize = document.getElementById('pageSize').value;
+            const customWidth = parseFloat(document.getElementById('customWidth').value);
+            const customHeight = parseFloat(document.getElementById('customHeight').value);
+            const backPlate = document.getElementById('backPlate').checked;
+            const supportPlate = document.getElementById('supportPlate').checked;
+
+            if (!text.trim()) {
+                showStatus('Please enter some text!', 'error');
+                return;
+            }
+
+            const generateBtn = document.getElementById('generateBtn');
+            generateBtn.disabled = true;
+            showStatus('<span class="spinner"></span> Generating 3D model...', 'info');
+
+            // Send request to backend server
+            fetch('/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    text: text,
+                    pageSize: pageSize,
+                    customWidth: customWidth,
+                    customHeight: customHeight,
+                    backPlate: backPlate,
+                    supportPlate: supportPlate
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showStatus('Error: ' + data.error, 'error');
+                    generateBtn.disabled = false;
+                    return;
+                }
+                
+                // Store the STL file path for download
+                window.currentSTLFile = data.stl_file;
+                
+                // Create geometry for preview
+                const geometry = generateBrailleGeometry(text, pageSize, customWidth, customHeight, backPlate, supportPlate);
+                displayModel(geometry);
+                document.getElementById('downloadBtn').disabled = false;
+                showStatus('✓ Model generated successfully!', 'success');
+                updatePreviewInfo(geometry, data.file_size);
+                generateBtn.disabled = false;
+            })
+            .catch(error => {
+                showStatus('Error: ' + error.message, 'error');
+                generateBtn.disabled = false;
+            });
+        }
+
+        function generateBrailleGeometry(text, pageSize, customWidth, customHeight, backPlate, supportPlate) {
+            // This is a simplified geometry generation for demonstration
+            // In production, this would integrate with the actual jscad engine
+            
+            let width, height;
+            if (pageSize === 'Custom') {
+                width = customWidth;
+                height = customHeight;
+            } else {
+                [width, height] = pageSizes[pageSize];
+            }
+
+            const geometry = new THREE.BufferGeometry();
+
+            // Create a simple box as placeholder (in real scenario, this would be actual braille dots)
+            const boxGeom = new THREE.BoxGeometry(width * 0.9, height * 0.9, 2);
+            const positions = boxGeom.attributes.position;
+            const indices = boxGeom.index;
+
+            geometry.setAttribute('position', positions);
+            if (indices) geometry.setIndex(indices);
+            geometry.computeVertexNormals();
+
+            return geometry;
+        }
+
+        function displayModel(geometry) {
+            if (brailleModel) {
+                scene.remove(brailleModel);
+            }
+
+            const material = new THREE.MeshPhongMaterial({
+                color: 0x667eea,
+                shininess: 100,
+                side: THREE.DoubleSide
+            });
+
+            brailleModel = new THREE.Mesh(geometry, material);
+            scene.add(brailleModel);
+
+            // Center and fit model to view
+            geometry.computeBoundingBox();
+            const center = geometry.boundingBox.getCenter(new THREE.Vector3());
+            geometry.translate(-center.x, -center.y, -center.z);
+            
+            const size = geometry.boundingBox.getSize(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const fov = camera.fov * (Math.PI / 180);
+            let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+            cameraZ *= 1.5;
+            camera.position.z = cameraZ;
+        }
+
+        function updatePreviewInfo(geometry, fileSize = 0) {
+            const vertices = geometry.attributes.position.array.length / 3;
+            const previewInfo = document.getElementById('previewInfo');
+            document.getElementById('infoVertices').textContent = vertices.toLocaleString();
+            if (fileSize > 0) {
+                document.getElementById('infoSize').textContent = (fileSize / 1024).toFixed(2) + ' KB';
+            }
+            previewInfo.style.display = 'block';
+        }
+
+        function downloadSTL() {
+            if (!brailleModel) {
+                showStatus('Please generate a model first!', 'error');
+                return;
+            }
+
+            const downloadBtn = document.getElementById('downloadBtn');
+            downloadBtn.disabled = true;
+
+            try {
+                // Download from server
+                if (window.currentSTLFile) {
+                    const filename = window.currentSTLFile.split('/').pop() || window.currentSTLFile.split('\\').pop();
+                    const url = '/download/' + filename;
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'braille-plate-' + new Date().toISOString().slice(0, 10) + '.stl';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    showStatus('✓ STL file downloaded successfully!', 'success');
+                } else {
+                    showStatus('Error: No STL file available', 'error');
+                }
+            } catch (error) {
+                showStatus('Error downloading STL: ' + error.message, 'error');
+            } finally {
+                downloadBtn.disabled = false;
+            }
+        }
+
+        // Update custom size fields based on page size selection
+        document.getElementById('pageSize').addEventListener('change', (e) => {
+            if (e.target.value !== 'Custom') {
+                const [width, height] = pageSizes[e.target.value];
+                document.getElementById('customWidth').value = width;
+                document.getElementById('customHeight').value = height;
+            }
+        });
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            initThreeJS();
+            showStatus('Ready! Enter text and click "Generate 3D Model"', 'info');
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            const canvas = document.getElementById('canvas');
+            const width = canvas.clientWidth;
+            const height = canvas.clientHeight;
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        });
+    </script>
+</body>
+</html>
