@@ -20,6 +20,7 @@ function getParameterDefinitions() {
     { name: 'customHeight', caption: 'Höhe (mm) - wenn Custom:', type: 'float', default: 150 },
     { name: 'backPlate', caption: 'Drucke Braille auf einer 2mm Platte:', type: 'bool', default: true },
     { name: 'supportPlate', caption: 'Nutze eine Support Platte für leichteres Drucken:', type: 'bool', default: true },
+    { name: 'binderHoles', caption: 'Erstelle Ordnerlöcher (DIN-Format):', type: 'bool', default: false },
   ];
 }
 
@@ -31,6 +32,44 @@ const pageSizes = {
   'B5': [176, 250],
   'Custom': [100, 150]
 };
+
+// DIN binder hole specifications (German standard)
+// Format: [distance_from_bottom, hole_spacing, start_from_left, hole_diameter, num_holes]
+const binderHoleSpecs = {
+  'A5': [60, 60, 9, 6, 4],    // 4 holes, 60mm from bottom, 60mm spacing, 9mm from left
+  'A6': [40, 40, 6, 5, 2],    // 2 holes, 40mm from bottom, 40mm spacing, 6mm from left
+  'A7': [30, 30, 4.5, 4, 2],  // 2 holes, 30mm from bottom, 30mm spacing, 4.5mm from left
+  'B5': [80, 80, 12, 6, 4],   // 4 holes, 80mm from bottom, 80mm spacing, 12mm from left
+  'Custom': [50, 50, 8, 6, 2] // Default for custom sizes
+};
+
+// Function to create binder holes according to DIN specifications
+function createBinderHoles(pageSize, targetWidth, targetHeight) {
+  const spec = binderHoleSpecs[pageSize];
+  if (!spec) return new CSG(); // Return empty CSG if no spec found
+  
+  const [distanceFromBottom, holeSpacing, startFromLeft, holeDiameter, numHoles] = spec;
+  
+  let holes = new CSG();
+  
+  for (let i = 0; i < numHoles; i++) {
+    const x = startFromLeft + (i * holeSpacing);
+    const y = distanceFromBottom;
+    
+    // Only create hole if it fits within the page boundaries
+    if (x + holeDiameter/2 < targetWidth && y + holeDiameter/2 < targetHeight) {
+      const hole = new CSG.cylinder({
+        start: [x, y, -plate_thickness - 1],
+        end: [x, y, 1],
+        radius: holeDiameter / 2,
+        resolution: resolution
+      });
+      holes = holes.union(hole);
+    }
+  }
+  
+  return holes;
+}
 
 // Main entry point; here we construct our solid: 
 function main(params)
@@ -100,6 +139,15 @@ function main(params)
 		}
 	} else {
 		finalobject = finalobject.subtract(backplate);
+	}
+	
+	// Add binder holes if requested and backplate is used
+	if(params.binderHoles == true && params.backPlate == true)
+	{
+		const binderHoles = createBinderHoles(params.pageSize, targetWidth, targetHeight);
+		if(!binderHoles.isEmpty()) {
+			finalobject = finalobject.subtract(binderHoles);
+		}
 	}
 	
 	//return CGS object of braille string with eventual plates

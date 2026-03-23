@@ -314,6 +314,13 @@ barrierefreie Technologie</textarea>
                     </div>
                 </div>
 
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="binderHoles">
+                        <label for="binderHoles" style="margin: 0;">Include Binder Holes (DIN Format)</label>
+                    </div>
+                </div>
+
                 <div class="button-group">
                     <button class="btn-generate" id="generateBtn" onclick="generateBraille()">
                         Generate 3D Model
@@ -560,6 +567,7 @@ barrierefreie Technologie</textarea>
             const customHeight = parseFloat(document.getElementById('customHeight').value);
             const backPlate = document.getElementById('backPlate').checked;
             const supportPlate = document.getElementById('supportPlate').checked;
+            const binderHoles = document.getElementById('binderHoles').checked;
 
             if (!text.trim()) {
                 showStatus('Please enter some text!', 'error');
@@ -582,7 +590,8 @@ barrierefreie Technologie</textarea>
                     customWidth: customWidth,
                     customHeight: customHeight,
                     backPlate: backPlate,
-                    supportPlate: supportPlate
+                    supportPlate: supportPlate,
+                    binderHoles: binderHoles
                 })
             })
             .then(response => response.json())
@@ -593,8 +602,8 @@ barrierefreie Technologie</textarea>
                     return;
                 }
                 
-                // Store the STL file path for download
-                window.currentSTLFile = data.stl_file;
+                // Store the STL filename for download
+                window.currentSTLFile = data.filename;
                 
                 // Create geometry for preview
                 const geometry = generateBrailleGeometry(text, pageSize, customWidth, customHeight, backPlate, supportPlate);
@@ -685,8 +694,7 @@ barrierefreie Technologie</textarea>
             try {
                 // Download from server
                 if (window.currentSTLFile) {
-                    const filename = window.currentSTLFile.split('/').pop() || window.currentSTLFile.split('\\').pop();
-                    const url = '/download/' + filename;
+                    const url = '/download/' + encodeURIComponent(window.currentSTLFile);
                     const link = document.createElement('a');
                     link.href = url;
                     link.download = 'braille-plate-' + new Date().toISOString().slice(0, 10) + '.stl';
