@@ -307,10 +307,60 @@ barrierefreie Technologie</textarea>
                     </div>
                 </div>
 
+                <div class="form-group" id="dotHeightGroup" style="display: none;">
+                    <label for="dotHeight">Braille Dot Height (mm)</label>
+                    <input type="number" id="dotHeight" value="1.5" min="0.5" max="5" step="0.1" />
+                </div>
+
                 <div class="form-group">
                     <div class="checkbox-group">
                         <input type="checkbox" id="supportPlate" checked>
                         <label for="supportPlate" style="margin: 0;">Include Support Plates</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="plateThickness">Plate Thickness (mm)</label>
+                    <input type="number" id="plateThickness" value="2" min="1" max="20" step="0.5" />
+                </div>
+
+                <div class="form-group">
+                    <label>Layout</label>
+                    <div class="size-options" style="grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <div class="size-input">
+                            <label for="alignX" style="font-size: 0.85em; margin-bottom: 5px;">Horizontal Align</label>
+                            <select id="alignX">
+                                <option value="center">Center</option>
+                                <option value="left">Left</option>
+                                <option value="right">Right</option>
+                            </select>
+                        </div>
+                        <div class="size-input">
+                            <label for="alignY" style="font-size: 0.85em; margin-bottom: 5px;">Vertical Align</label>
+                            <select id="alignY">
+                                <option value="center">Center</option>
+                                <option value="bottom">Bottom</option>
+                                <option value="top">Top</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="size-options" style="grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <div class="size-input">
+                            <label for="offsetX" style="font-size: 0.85em; margin-bottom: 5px;">Offset X (mm)</label>
+                            <input type="number" id="offsetX" value="0" step="1" min="-100" max="100" />
+                        </div>
+                        <div class="size-input">
+                            <label for="offsetY" style="font-size: 0.85em; margin-bottom: 5px;">Offset Y (mm)</label>
+                            <input type="number" id="offsetY" value="0" step="1" min="-100" max="100" />
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="landscape">
+                        <label for="landscape" style="margin: 0;">Use Landscape Orientation</label>
                     </div>
                 </div>
 
@@ -568,6 +618,9 @@ barrierefreie Technologie</textarea>
             const backPlate = document.getElementById('backPlate').checked;
             const supportPlate = document.getElementById('supportPlate').checked;
             const binderHoles = document.getElementById('binderHoles').checked;
+            const dotHeightInput = document.getElementById('dotHeight').value;
+            const dotHeight = dotHeightInput ? parseFloat(dotHeightInput) : 1.5;
+            console.log('Dot height value from input:', dotHeightInput, 'Parsed:', dotHeight, 'BackPlate:', backPlate);
 
             if (!text.trim()) {
                 showStatus('Please enter some text!', 'error');
@@ -591,10 +644,14 @@ barrierefreie Technologie</textarea>
                     customHeight: customHeight,
                     backPlate: backPlate,
                     supportPlate: supportPlate,
-                    binderHoles: binderHoles
+                    binderHoles: binderHoles,
+                    dotHeight: dotHeight
                 })
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Response received from backend');
+                return response.json();
+            })
             .then(data => {
                 if (data.error) {
                     showStatus('Error: ' + data.error, 'error');
@@ -605,8 +662,18 @@ barrierefreie Technologie</textarea>
                 // Store the STL filename for download
                 window.currentSTLFile = data.filename;
                 
-                // Create geometry for preview
-                const geometry = generateBrailleGeometry(text, pageSize, customWidth, customHeight, backPlate, supportPlate);
+                const landscape = document.getElementById('landscape').checked;
+                const alignX = document.getElementById('alignX').value;
+                const alignY = document.getElementById('alignY').value;
+                const offsetX = parseFloat(document.getElementById('offsetX').value) || 0;
+                const offsetY = parseFloat(document.getElementById('offsetY').value) || 0;
+                const binderHoles = document.getElementById('binderHoles').checked;
+                const plateThickness = parseFloat(document.getElementById('plateThickness').value) || 2;
+
+                // Create geometry for preview with layout adjustments
+                console.log('Generating geometry with:', {text, pageSize, customWidth, customHeight, backPlate, supportPlate, binderHoles, landscape, alignX, alignY, offsetX, offsetY, plateThickness});
+                const geometry = generateBrailleGeometry(text, pageSize, customWidth, customHeight, backPlate, supportPlate, binderHoles, landscape, alignX, alignY, offsetX, offsetY, plateThickness);
+                console.log('Generated geometry:', geometry);
                 displayModel(geometry);
                 document.getElementById('downloadBtn').disabled = false;
                 showStatus('✓ Model generated successfully!', 'success');
@@ -629,6 +696,14 @@ barrierefreie Technologie</textarea>
             bitmapSize: 6,
             plateThickness: 2,
             margin: 5
+        };
+
+        const binderHoleSpecs = {
+            'A5': [60, 60, 9, 6, 4],
+            'A6': [40, 40, 6, 5, 2],
+            'A7': [30, 30, 4.5, 4, 2],
+            'B5': [80, 80, 12, 6, 4],
+            'Custom': [50, 50, 8, 6, 2]
         };
 
         const brailleMapSingleChar = {
@@ -754,17 +829,22 @@ barrierefreie Technologie</textarea>
         }
 
         function createBrailleText(text, dotMaterial) {
+            console.log('createBrailleText called with text:', text);
             const lines = text.split('\n');
+            console.log('Lines:', lines);
             const group = new THREE.Group();
             let maxWidth = 0;
 
             lines.forEach((line, lineIndex) => {
+                console.log('Processing line:', lineIndex, line);
                 const lineData = createBrailleLine(line, dotMaterial);
+                console.log('Line data:', lineData);
                 lineData.group.position.set(lineIndex * brailleParams.plateHeight, 0, 0);
                 group.add(lineData.group);
                 maxWidth = Math.max(maxWidth, lineData.width);
             });
 
+            console.log('Final braille text group children:', group.children.length);
             return {
                 group,
                 width: maxWidth,
@@ -772,14 +852,44 @@ barrierefreie Technologie</textarea>
             };
         }
 
-        function generateBrailleGeometry(text, pageSize, customWidth, customHeight, backPlate, supportPlate) {
-            let targetWidth, targetHeight;
-            if (pageSize === 'Custom') {
-                targetWidth = customWidth;
-                targetHeight = customHeight;
-            } else {
-                [targetWidth, targetHeight] = pageSizes[pageSize];
+        function createBinderHoleMarkers(pageSize, targetWidth, targetHeight, holeMaterial, landscape, plateThickness) {
+            const spec = binderHoleSpecs[pageSize] || binderHoleSpecs['Custom'];
+            const [distanceFromBottom, holeSpacing, startFromLeft, holeDiameter, numHoles] = spec;
+
+            const holes = new THREE.Group();
+            for (let i = 0; i < numHoles; i++) {
+                let x = startFromLeft + (i * holeSpacing);
+                let y = distanceFromBottom;
+
+                if (landscape) {
+                    [x, y] = [y, x];
+                }
+
+                if (x + holeDiameter / 2 < targetWidth && y + holeDiameter / 2 < targetHeight) {
+                    const hole = new THREE.Mesh(
+                        new THREE.CylinderGeometry(holeDiameter / 2, holeDiameter / 2, plateThickness + 2, 24),
+                        holeMaterial
+                    );
+                    hole.rotation.x = Math.PI / 2;
+                    hole.position.set(x, y, -plateThickness / 2);
+                    holes.add(hole);
+                }
             }
+
+            return holes;
+        }
+
+        function generateBrailleGeometry(text, pageSize, customWidth, customHeight, backPlate, supportPlate, binderHoles, landscape, alignX, alignY, offsetX, offsetY, plateThickness) {
+            let baseWidth, baseHeight;
+            if (pageSize === 'Custom') {
+                baseWidth = customWidth;
+                baseHeight = customHeight;
+            } else {
+                [baseWidth, baseHeight] = pageSizes[pageSize];
+            }
+
+            const targetWidth = landscape ? baseHeight : baseWidth;
+            const targetHeight = landscape ? baseWidth : baseHeight;
 
             const dotMaterial = new THREE.MeshPhongMaterial({ color: 0x333333, shininess: 50 });
             const plateMaterial = new THREE.MeshPhongMaterial({ color: 0x777777, shininess: 20 });
@@ -790,7 +900,70 @@ barrierefreie Technologie</textarea>
 
             const scale = Math.min(1, maxContentWidth / Math.max(1, brailleData.width), maxContentHeight / Math.max(1, brailleData.height));
             brailleData.group.scale.set(scale, scale, 1);
-            brailleData.group.position.set((targetWidth - brailleData.width * scale) / 2, (targetHeight - brailleData.height * scale) / 2, 0);
+
+            const contentWidth = brailleData.width * scale;
+            const contentHeight = brailleData.height * scale;
+
+            let textX = brailleParams.margin;
+            if (alignX === 'center') textX += Math.max(0, (targetWidth - 2 * brailleParams.margin - contentWidth) / 2);
+            else if (alignX === 'right') textX += Math.max(0, targetWidth - 2 * brailleParams.margin - contentWidth);
+
+            let textY = brailleParams.margin;
+            if (alignY === 'center') textY += Math.max(0, (targetHeight - 2 * brailleParams.margin - contentHeight) / 2);
+            else if (alignY === 'top') textY += Math.max(0, targetHeight - 2 * brailleParams.margin - contentHeight);
+
+            textX += offsetX;
+            textY += offsetY;
+
+            brailleData.group.position.set(textX, textY, 0);
+
+            const modelGroup = new THREE.Group();
+
+            if (backPlate) {
+                const plate = new THREE.Mesh(
+                    new THREE.BoxGeometry(targetWidth, targetHeight, plateThickness),
+                    plateMaterial
+                );
+                plate.position.set(targetWidth / 2, targetHeight / 2, -plateThickness / 2);
+                modelGroup.add(plate);
+
+                if (supportPlate) {
+                    const support1 = new THREE.Mesh(new THREE.BoxGeometry(2, 5, 20), plateMaterial);
+                    support1.position.set(targetWidth - 1, 5, -10);
+                    modelGroup.add(support1);
+
+                    const support2 = new THREE.Mesh(new THREE.BoxGeometry(2, 5, 20), plateMaterial);
+                    support2.position.set(targetWidth - 1, targetHeight - 5, -10);
+                    modelGroup.add(support2);
+                }
+
+                if (binderHoles) {
+                    const holeMaterial = new THREE.MeshPhongMaterial({ color: 0x101010, emissive: 0x000000, opacity: 0.8, transparent: true });
+                    const holes = createBinderHoleMarkers(pageSize, targetWidth, targetHeight, holeMaterial, landscape, plateThickness);
+                    modelGroup.add(holes);
+                }
+            }
+
+            modelGroup.add(brailleData.group);
+
+            if (landscape) {
+                modelGroup.rotation.z = -Math.PI / 2;
+                modelGroup.updateMatrixWorld();
+            }
+
+            return modelGroup;
+        }
+
+        function displayModel(modelObject) {
+
+            let textY = brailleParams.margin;
+            if (alignY === 'center') textY += Math.max(0, availableHeight / 2);
+            else if (alignY === 'top') textY += Math.max(0, availableHeight);
+
+            textX += offsetX;
+            textY += offsetY;
+
+            brailleData.group.position.set(textX, textY, 0);
 
             const modelGroup = new THREE.Group();
 
@@ -811,6 +984,12 @@ barrierefreie Technologie</textarea>
                     support2.position.set(targetWidth - 1, targetHeight - 5, -10);
                     modelGroup.add(support2);
                 }
+
+                if (binderHoles) {
+                    const holeMaterial = new THREE.MeshPhongMaterial({ color: 0x101010, transparent: true, opacity: 0.85 });
+                    const holeMarkers = createBinderHoleMarkers(pageSize, targetWidth, targetHeight, holeMaterial);
+                    modelGroup.add(holeMarkers);
+                }
             }
 
             modelGroup.add(brailleData.group);
@@ -825,18 +1004,21 @@ barrierefreie Technologie</textarea>
             brailleModel = modelObject;
             scene.add(brailleModel);
 
+            // Simple camera positioning - center the model and position camera to see it
             const box = new THREE.Box3().setFromObject(brailleModel);
             const center = box.getCenter(new THREE.Vector3());
-            brailleModel.position.x += -center.x;
-            brailleModel.position.y += -center.y;
-            brailleModel.position.z += -center.z;
-
             const size = box.getSize(new THREE.Vector3());
+
+            // Center the model
+            brailleModel.position.x = -center.x;
+            brailleModel.position.y = -center.y;
+            brailleModel.position.z = -center.z;
+
+            // Position camera to see the entire model
             const maxDim = Math.max(size.x, size.y, size.z);
-            const fov = camera.fov * (Math.PI / 180);
-            let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
-            cameraZ *= 1.5;
-            camera.position.z = cameraZ;
+            const distance = maxDim * 2; // Distance from model
+            camera.position.set(0, 0, distance);
+            camera.lookAt(0, 0, 0);
         }
 
         function countVertices(object) {
@@ -908,6 +1090,27 @@ barrierefreie Technologie</textarea>
         window.addEventListener('load', () => {
             initThreeJS();
             showStatus('Ready! Enter text and click "Generate 3D Model"', 'info');
+            
+            // Show/hide dot height input based on back plate checkbox
+            const backPlateCheckbox = document.getElementById('backPlate');
+            const dotHeightGroup = document.getElementById('dotHeightGroup');
+            
+            // Initial state - show dot height only if back plate is NOT checked
+            if (backPlateCheckbox.checked) {
+                dotHeightGroup.style.display = 'none';
+            } else {
+                dotHeightGroup.style.display = 'block';
+            }
+            
+            // Event listener for changes
+            backPlateCheckbox.addEventListener('change', (e) => {
+                console.log('BackPlate changed to:', e.target.checked);
+                if (e.target.checked) {
+                    dotHeightGroup.style.display = 'none';
+                } else {
+                    dotHeightGroup.style.display = 'block';
+                }
+            });
         });
 
         // Handle window resize
