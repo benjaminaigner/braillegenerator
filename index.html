@@ -619,52 +619,219 @@ barrierefreie Technologie</textarea>
             });
         }
 
-        function generateBrailleGeometry(text, pageSize, customWidth, customHeight, backPlate, supportPlate) {
-            // This is a simplified geometry generation for demonstration
-            // In production, this would integrate with the actual jscad engine
-            
-            let width, height;
-            if (pageSize === 'Custom') {
-                width = customWidth;
-                height = customHeight;
-            } else {
-                [width, height] = pageSizes[pageSize];
-            }
+        const brailleParams = {
+            diameter: 1.44,
+            spacing: 2.5,
+            distance: 6,
+            plateHeight: 10.8,
+            rowSize: 2,
+            colSize: 3,
+            bitmapSize: 6,
+            plateThickness: 2,
+            margin: 5
+        };
 
-            const geometry = new THREE.BufferGeometry();
+        const brailleMapSingleChar = {
+            'a': [1,0,0,0,0,0], 'b': [1,0,1,0,0,0], 'c': [1,1,0,0,0,0], 'd': [1,1,0,1,0,0], 'e': [1,0,0,1,0,0],
+            'f': [1,1,1,0,0,0], 'g': [1,1,1,1,0,0], 'h': [1,0,1,1,0,0], 'i': [0,1,1,0,0,0], 'j': [0,1,1,1,0,0],
+            'k': [1,0,0,0,1,0], 'l': [1,0,1,0,1,0], 'm': [1,1,0,0,1,0], 'n': [1,1,0,1,1,0], 'o': [1,0,0,1,1,0],
+            'p': [1,1,1,0,1,0], 'q': [1,1,1,1,1,0], 'r': [1,0,1,1,1,0], 's': [0,1,1,0,1,0], 't': [0,1,1,1,1,0],
+            'u': [1,0,0,0,1,1], 'v': [1,0,1,0,1,1], 'w': [0,1,1,1,0,1], 'x': [1,1,0,0,1,1], 'y': [1,1,0,1,1,1],
+            'z': [1,0,0,1,1,1], 'ü': [1,0,1,1,0,1], 'ö': [0,1,1,0,0,1], 'ä': [0,1,0,1,1,0], ',': [0,0,1,0,0,0],
+            ';': [0,0,1,0,1,0], ':': [0,0,1,1,0,0], '.': [0,0,0,0,1,0], '!': [0,0,1,1,1,0], '(': [0,0,1,1,1,1],
+            ')': [0,0,1,1,1,1], '?': [0,0,1,0,0,1], '-': [0,0,0,0,1,1], '„': [0,0,1,0,1,1], '“': [0,0,0,1,1,1],
+            'ß': [0,1,1,0,1,1], '‘': [0,0,0,0,0,1], '`': [0,0,0,0,0,1], '´': [0,0,0,0,0,1], ' ': [0,0,0,0,0,0]
+        };
 
-            // Create a simple box as placeholder (in real scenario, this would be actual braille dots)
-            const boxGeom = new THREE.BoxGeometry(width * 0.9, height * 0.9, 2);
-            const positions = boxGeom.attributes.position;
-            const indices = boxGeom.index;
+        const brailleMapDigits = {
+            'start': [0,1,0,1,1,1], '1': [1,0,0,0,0,0], '2': [1,0,1,0,0,0], '3': [1,1,0,0,0,0],
+            '4': [1,1,0,1,0,0], '5': [1,0,0,1,0,0], '6': [1,1,1,0,0,0], '7': [1,1,1,1,0,0],
+            '8': [1,0,1,1,0,0], '9': [0,1,1,0,0,0], '0': [0,1,1,1,0,0]
+        };
 
-            geometry.setAttribute('position', positions);
-            if (indices) geometry.setIndex(indices);
-            geometry.computeVertexNormals();
+        const brailleMapDoubleChar = {
+            'st': [0,1,1,1,1,1], 'au': [1,0,0,0,0,1], 'eu': [1,0,1,0,0,1],
+            'ei': [1,1,0,0,0,1], 'ch': [1,1,0,1,0,1], 'äu': [0,1,0,0,1,0], 'ie': [0,1,0,0,1,1]
+        };
 
-            return geometry;
+        const brailleMapTripleChar = { 'sch': [1,0,0,1,0,1] };
+
+        function locX(loc) {
+            return Math.floor(loc / brailleParams.rowSize) * brailleParams.spacing + brailleParams.spacing;
         }
 
-        function displayModel(geometry) {
+        function locY(loc) {
+            return (loc % brailleParams.rowSize) * brailleParams.spacing + (brailleParams.distance - brailleParams.spacing) / 2;
+        }
+
+        function createBrailleLetter(bitmap, dotMaterial) {
+            const group = new THREE.Group();
+            for (let loc = 0; loc < brailleParams.bitmapSize; loc++) {
+                if (bitmap[loc] === 1) {
+                    const sphere = new THREE.Mesh(
+                        new THREE.SphereGeometry(brailleParams.diameter / 2, 16, 16),
+                        dotMaterial
+                    );
+                    sphere.position.set(locX(loc), locY(loc), brailleParams.diameter / 2);
+                    group.add(sphere);
+                }
+            }
+            return group;
+        }
+
+        function findDots(line, prevChar) {
+            const retval = { consumed: 0, bitmaps: [] };
+
+            if (prevChar && brailleMapDigits[prevChar]) {
+                retval.bitmaps.push([0,0,0,0,0,0]);
+            }
+
+            const lower = line.toLowerCase();
+
+            if (lower.length >= 3 && brailleMapTripleChar[lower.substr(0,3)]) {
+                retval.consumed = 3;
+                retval.bitmaps.push(brailleMapTripleChar[lower.substr(0,3)]);
+                return retval;
+            }
+
+            if (lower.length >= 2 && brailleMapDoubleChar[lower.substr(0,2)]) {
+                retval.consumed = 2;
+                retval.bitmaps.push(brailleMapDoubleChar[lower.substr(0,2)]);
+                return retval;
+            }
+
+            if (lower.length >= 1 && brailleMapSingleChar[lower.substr(0,1)]) {
+                retval.consumed = 1;
+                retval.bitmaps.push(brailleMapSingleChar[lower.substr(0,1)]);
+                return retval;
+            }
+
+            if (lower.length >= 1 && brailleMapDigits[lower.substr(0,1)]) {
+                if (prevChar && brailleMapDigits[prevChar]) {
+                    retval.consumed = 1;
+                    retval.bitmaps.push(brailleMapDigits[lower.substr(0,1)]);
+                } else {
+                    retval.consumed = 1;
+                    retval.bitmaps.push(brailleMapDigits['start']);
+                    retval.bitmaps.push(brailleMapDigits[lower.substr(0,1)]);
+                }
+                return retval;
+            }
+
+            retval.consumed = -1;
+            return retval;
+        }
+
+        function createBrailleLine(line, dotMaterial) {
+            const lineGroup = new THREE.Group();
+            let charIndex = 0;
+            let distIndex = 0;
+
+            while (charIndex < line.length) {
+                const prevChar = charIndex > 0 ? line[charIndex - 1].toLowerCase() : ' ';
+                const { consumed, bitmaps } = findDots(line.substr(charIndex), prevChar);
+
+                if (consumed === -1) {
+                    charIndex += 1;
+                    continue;
+                }
+
+                bitmaps.forEach(bitmap => {
+                    const letterGroup = createBrailleLetter(bitmap, dotMaterial);
+                    letterGroup.position.set(0, distIndex * brailleParams.distance, 0);
+                    lineGroup.add(letterGroup);
+                    distIndex += 1;
+                });
+
+                charIndex += consumed;
+            }
+
+            return {
+                group: lineGroup,
+                width: distIndex * brailleParams.distance,
+                height: brailleParams.plateHeight
+            };
+        }
+
+        function createBrailleText(text, dotMaterial) {
+            const lines = text.split('\n');
+            const group = new THREE.Group();
+            let maxWidth = 0;
+
+            lines.forEach((line, lineIndex) => {
+                const lineData = createBrailleLine(line, dotMaterial);
+                lineData.group.position.set(lineIndex * brailleParams.plateHeight, 0, 0);
+                group.add(lineData.group);
+                maxWidth = Math.max(maxWidth, lineData.width);
+            });
+
+            return {
+                group,
+                width: maxWidth,
+                height: lines.length * brailleParams.plateHeight
+            };
+        }
+
+        function generateBrailleGeometry(text, pageSize, customWidth, customHeight, backPlate, supportPlate) {
+            let targetWidth, targetHeight;
+            if (pageSize === 'Custom') {
+                targetWidth = customWidth;
+                targetHeight = customHeight;
+            } else {
+                [targetWidth, targetHeight] = pageSizes[pageSize];
+            }
+
+            const dotMaterial = new THREE.MeshPhongMaterial({ color: 0x333333, shininess: 50 });
+            const plateMaterial = new THREE.MeshPhongMaterial({ color: 0x777777, shininess: 20 });
+
+            const brailleData = createBrailleText(text.toLowerCase(), dotMaterial);
+            const maxContentWidth = Math.max(1, targetWidth - 2 * brailleParams.margin);
+            const maxContentHeight = Math.max(1, targetHeight - 2 * brailleParams.margin);
+
+            const scale = Math.min(1, maxContentWidth / Math.max(1, brailleData.width), maxContentHeight / Math.max(1, brailleData.height));
+            brailleData.group.scale.set(scale, scale, 1);
+            brailleData.group.position.set((targetWidth - brailleData.width * scale) / 2, (targetHeight - brailleData.height * scale) / 2, 0);
+
+            const modelGroup = new THREE.Group();
+
+            if (backPlate) {
+                const plate = new THREE.Mesh(
+                    new THREE.BoxGeometry(targetWidth, targetHeight, brailleParams.plateThickness),
+                    plateMaterial
+                );
+                plate.position.set(targetWidth / 2, targetHeight / 2, -brailleParams.plateThickness / 2);
+                modelGroup.add(plate);
+
+                if (supportPlate) {
+                    const support1 = new THREE.Mesh(new THREE.BoxGeometry(2, 5, 20), plateMaterial);
+                    support1.position.set(targetWidth - 1, 5, -10);
+                    modelGroup.add(support1);
+
+                    const support2 = new THREE.Mesh(new THREE.BoxGeometry(2, 5, 20), plateMaterial);
+                    support2.position.set(targetWidth - 1, targetHeight - 5, -10);
+                    modelGroup.add(support2);
+                }
+            }
+
+            modelGroup.add(brailleData.group);
+            return modelGroup;
+        }
+
+        function displayModel(modelObject) {
             if (brailleModel) {
                 scene.remove(brailleModel);
             }
 
-            const material = new THREE.MeshPhongMaterial({
-                color: 0x667eea,
-                shininess: 100,
-                side: THREE.DoubleSide
-            });
-
-            brailleModel = new THREE.Mesh(geometry, material);
+            brailleModel = modelObject;
             scene.add(brailleModel);
 
-            // Center and fit model to view
-            geometry.computeBoundingBox();
-            const center = geometry.boundingBox.getCenter(new THREE.Vector3());
-            geometry.translate(-center.x, -center.y, -center.z);
-            
-            const size = geometry.boundingBox.getSize(new THREE.Vector3());
+            const box = new THREE.Box3().setFromObject(brailleModel);
+            const center = box.getCenter(new THREE.Vector3());
+            brailleModel.position.x += -center.x;
+            brailleModel.position.y += -center.y;
+            brailleModel.position.z += -center.z;
+
+            const size = box.getSize(new THREE.Vector3());
             const maxDim = Math.max(size.x, size.y, size.z);
             const fov = camera.fov * (Math.PI / 180);
             let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
@@ -672,8 +839,24 @@ barrierefreie Technologie</textarea>
             camera.position.z = cameraZ;
         }
 
-        function updatePreviewInfo(geometry, fileSize = 0) {
-            const vertices = geometry.attributes.position.array.length / 3;
+        function countVertices(object) {
+            let count = 0;
+
+            if (object.isMesh && object.geometry && object.geometry.attributes && object.geometry.attributes.position) {
+                count += object.geometry.attributes.position.count;
+            }
+
+            if (object.children && object.children.length) {
+                object.children.forEach(child => {
+                    count += countVertices(child);
+                });
+            }
+
+            return count;
+        }
+
+        function updatePreviewInfo(modelObject, fileSize = 0) {
+            const vertices = countVertices(modelObject);
             const previewInfo = document.getElementById('previewInfo');
             document.getElementById('infoVertices').textContent = vertices.toLocaleString();
             if (fileSize > 0) {
