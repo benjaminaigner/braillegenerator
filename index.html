@@ -898,24 +898,29 @@ barrierefreie Technologie</textarea>
             const maxContentWidth = Math.max(1, targetWidth - 2 * brailleParams.margin);
             const maxContentHeight = Math.max(1, targetHeight - 2 * brailleParams.margin);
 
-            const scale = Math.min(1, maxContentWidth / Math.max(1, brailleData.width), maxContentHeight / Math.max(1, brailleData.height));
+            const unscaledBounds = new THREE.Box3().setFromObject(brailleData.group);
+            const unscaledSize = unscaledBounds.getSize(new THREE.Vector3());
+            const scale = Math.min(1, maxContentWidth / Math.max(1, unscaledSize.x), maxContentHeight / Math.max(1, unscaledSize.y));
             brailleData.group.scale.set(scale, scale, 1);
 
-            const contentWidth = brailleData.width * scale;
-            const contentHeight = brailleData.height * scale;
+            // Align using the actual text bounds so alignment always targets text, not plate/group origin.
+            const textBounds = new THREE.Box3().setFromObject(brailleData.group);
+            const textSize = textBounds.getSize(new THREE.Vector3());
 
-            let textX = brailleParams.margin;
-            if (alignX === 'center') textX += Math.max(0, (targetWidth - 2 * brailleParams.margin - contentWidth) / 2);
-            else if (alignX === 'right') textX += Math.max(0, targetWidth - 2 * brailleParams.margin - contentWidth);
+            const availableX = Math.max(0, targetWidth - 2 * brailleParams.margin - textSize.x);
+            const availableY = Math.max(0, targetHeight - 2 * brailleParams.margin - textSize.y);
 
-            let textY = brailleParams.margin;
-            if (alignY === 'center') textY += Math.max(0, (targetHeight - 2 * brailleParams.margin - contentHeight) / 2);
-            else if (alignY === 'top') textY += Math.max(0, targetHeight - 2 * brailleParams.margin - contentHeight);
+            let alignedMinX = brailleParams.margin;
+            if (alignX === 'center') alignedMinX += availableX / 2;
+            else if (alignX === 'right') alignedMinX += availableX;
 
-            textX += offsetX;
-            textY += offsetY;
+            let alignedMinY = brailleParams.margin;
+            if (alignY === 'center') alignedMinY += availableY / 2;
+            else if (alignY === 'top') alignedMinY += availableY;
 
-            brailleData.group.position.set(textX, textY, 0);
+            const deltaX = alignedMinX + offsetX - textBounds.min.x;
+            const deltaY = alignedMinY + offsetY - textBounds.min.y;
+            brailleData.group.position.set(deltaX, deltaY, 0);
 
             const modelGroup = new THREE.Group();
 
