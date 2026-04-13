@@ -279,6 +279,7 @@ barrierefreie Technologie</textarea>
                     <label for="pageSize">Page Size:</label>
                     <select id="pageSize">
                         <option value="Custom">Custom</option>
+                        <option value="A4">A4 (210 x 297 mm)</option>
                         <option value="A5">A5 (148 x 210 mm)</option>
                         <option value="A6">A6 (105 x 148 mm)</option>
                         <option value="A7">A7 (74 x 105 mm)</option>
@@ -303,13 +304,8 @@ barrierefreie Technologie</textarea>
                 <div class="form-group">
                     <div class="checkbox-group">
                         <input type="checkbox" id="backPlate" checked>
-                        <label for="backPlate" style="margin: 0;">Include Back Plate (2mm)</label>
+                            <label for="backPlate" style="margin: 0;">Include Back Plate</label>
                     </div>
-                </div>
-
-                <div class="form-group" id="dotHeightGroup" style="display: none;">
-                    <label for="dotHeight">Braille Dot Height (mm)</label>
-                    <input type="number" id="dotHeight" value="1.5" min="0.5" max="5" step="0.1" />
                 </div>
 
                 <div class="form-group">
@@ -367,9 +363,61 @@ barrierefreie Technologie</textarea>
                 <div class="form-group">
                     <div class="checkbox-group">
                         <input type="checkbox" id="binderHoles">
-                        <label for="binderHoles" style="margin: 0;">Include Binder Holes (DIN Format)</label>
+                        <label for="binderHoles" style="margin: 0;">Include Binder Holes (A4/A5/A6: ISO 838 / DIN 2-hole standard)</label>
                     </div>
                 </div>
+
+                    <div class="form-group">
+                        <label for="binderHoleSide">Binder Hole Alignment</label>
+                        <select id="binderHoleSide">
+                            <option value="long">Long Side Centered</option>
+                            <option value="short">Short Side Centered</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="readingEdgeChamfer" checked>
+                            <label for="readingEdgeChamfer" style="margin: 0;">Add 45° Reading Edge Chamfer</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="readingEdgeSide">Reading Edge</label>
+                        <select id="readingEdgeSide">
+                            <option value="left">Left</option>
+                            <option value="top">Top</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="readingMarkerPosition">Position Lesestart-Marker</label>
+                        <select id="readingMarkerPosition">
+                            <option value="text-start" selected>Textstart (Auto)</option>
+                            <option value="top-left">Oben links</option>
+                            <option value="top-center">Oben mittig</option>
+                            <option value="top-right">Oben rechts</option>
+                            <option value="left-center">Links mittig</option>
+                            <option value="right-center">Rechts mittig</option>
+                            <option value="bottom-left">Unten links</option>
+                            <option value="bottom-center">Unten mittig</option>
+                            <option value="bottom-right">Unten rechts</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="readingMarkerLength">Länge Lesestart-Marker (mm)</label>
+                        <input type="number" id="readingMarkerLength" value="14" min="4" max="30" step="1" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="readingMarkerPreset">Voreinstellung Lesestart-Marker</label>
+                        <select id="readingMarkerPreset">
+                            <option value="8">Kurz (8 mm)</option>
+                            <option value="14" selected>Deutlich (14 mm)</option>
+                            <option value="custom">Benutzerdefiniert</option>
+                        </select>
+                    </div>
 
                 <div class="button-group">
                     <button class="btn-generate" id="generateBtn" onclick="generateBraille()">
@@ -521,170 +569,15 @@ barrierefreie Technologie</textarea>
     <!-- Braille Generator Script -->
     <script>
         let scene, camera, renderer, brailleModel;
+
         const pageSizes = {
-            'A5': [148, 210],
-            'A6': [105, 148],
-            'A7': [74, 105],
-            'B5': [176, 250],
-            'Custom': [100, 150]
+            A4: [210, 297],
+            A5: [148, 210],
+            A6: [105, 148],
+            A7: [74, 105],
+            B5: [176, 250],
+            Custom: [100, 150]
         };
-
-        function initThreeJS() {
-            camera = new THREE.PerspectiveCamera(
-                75,
-                document.getElementById('canvas').clientWidth / document.getElementById('canvas').clientHeight,
-                0.1,
-                1000
-            );
-            camera.position.z = 100;
-
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xf5f5f5);
-
-            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas'), antialias: true });
-            renderer.setSize(
-                document.getElementById('canvas').clientWidth,
-                document.getElementById('canvas').clientHeight
-            );
-            renderer.setPixelRatio(window.devicePixelRatio);
-
-            // Lighting
-            const light1 = new THREE.DirectionalLight(0xffffff, 0.8);
-            light1.position.set(10, 10, 10);
-            scene.add(light1);
-
-            const light2 = new THREE.DirectionalLight(0xffffff, 0.4);
-            light2.position.set(-10, -10, -10);
-            scene.add(light2);
-
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-            scene.add(ambientLight);
-
-            // Mouse controls
-            setupMouseControls();
-            animate();
-        }
-
-        function setupMouseControls() {
-            let isDragging = false;
-            let previousMousePosition = { x: 0, y: 0 };
-
-            document.getElementById('canvas').addEventListener('mousedown', (e) => {
-                isDragging = true;
-                previousMousePosition = { x: e.clientX, y: e.clientY };
-            });
-
-            document.getElementById('canvas').addEventListener('mousemove', (e) => {
-                if (isDragging && brailleModel) {
-                    const deltaX = e.clientX - previousMousePosition.x;
-                    const deltaY = e.clientY - previousMousePosition.y;
-
-                    brailleModel.rotation.y += deltaX * 0.01;
-                    brailleModel.rotation.x += deltaY * 0.01;
-
-                    previousMousePosition = { x: e.clientX, y: e.clientY };
-                }
-            });
-
-            document.getElementById('canvas').addEventListener('mouseup', () => {
-                isDragging = false;
-            });
-
-            document.getElementById('canvas').addEventListener('wheel', (e) => {
-                e.preventDefault();
-                if (camera) {
-                    camera.position.z += e.deltaY * 0.1;
-                    camera.position.z = Math.max(50, Math.min(300, camera.position.z));
-                }
-            });
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            renderer.render(scene, camera);
-        }
-
-        function showStatus(message, type = 'info') {
-            const statusEl = document.getElementById('status');
-            statusEl.textContent = message;
-            statusEl.className = 'status ' + type;
-        }
-
-        function generateBraille() {
-            const text = document.getElementById('textInput').value;
-            const pageSize = document.getElementById('pageSize').value;
-            const customWidth = parseFloat(document.getElementById('customWidth').value);
-            const customHeight = parseFloat(document.getElementById('customHeight').value);
-            const backPlate = document.getElementById('backPlate').checked;
-            const supportPlate = document.getElementById('supportPlate').checked;
-            const binderHoles = document.getElementById('binderHoles').checked;
-            const dotHeightInput = document.getElementById('dotHeight').value;
-            const dotHeight = dotHeightInput ? parseFloat(dotHeightInput) : 1.5;
-            console.log('Dot height value from input:', dotHeightInput, 'Parsed:', dotHeight, 'BackPlate:', backPlate);
-
-            if (!text.trim()) {
-                showStatus('Please enter some text!', 'error');
-                return;
-            }
-
-            const generateBtn = document.getElementById('generateBtn');
-            generateBtn.disabled = true;
-            showStatus('<span class="spinner"></span> Generating 3D model...', 'info');
-
-            // Send request to backend server
-            fetch('/generate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    text: text,
-                    pageSize: pageSize,
-                    customWidth: customWidth,
-                    customHeight: customHeight,
-                    backPlate: backPlate,
-                    supportPlate: supportPlate,
-                    binderHoles: binderHoles,
-                    dotHeight: dotHeight
-                })
-            })
-            .then(response => {
-                console.log('Response received from backend');
-                return response.json();
-            })
-            .then(data => {
-                if (data.error) {
-                    showStatus('Error: ' + data.error, 'error');
-                    generateBtn.disabled = false;
-                    return;
-                }
-                
-                // Store the STL filename for download
-                window.currentSTLFile = data.filename;
-                
-                const landscape = document.getElementById('landscape').checked;
-                const alignX = document.getElementById('alignX').value;
-                const alignY = document.getElementById('alignY').value;
-                const offsetX = parseFloat(document.getElementById('offsetX').value) || 0;
-                const offsetY = parseFloat(document.getElementById('offsetY').value) || 0;
-                const binderHoles = document.getElementById('binderHoles').checked;
-                const plateThickness = parseFloat(document.getElementById('plateThickness').value) || 2;
-
-                // Create geometry for preview with layout adjustments
-                console.log('Generating geometry with:', {text, pageSize, customWidth, customHeight, backPlate, supportPlate, binderHoles, landscape, alignX, alignY, offsetX, offsetY, plateThickness});
-                const geometry = generateBrailleGeometry(text, pageSize, customWidth, customHeight, backPlate, supportPlate, binderHoles, landscape, alignX, alignY, offsetX, offsetY, plateThickness);
-                console.log('Generated geometry:', geometry);
-                displayModel(geometry);
-                document.getElementById('downloadBtn').disabled = false;
-                showStatus('✓ Model generated successfully!', 'success');
-                updatePreviewInfo(geometry, data.file_size);
-                generateBtn.disabled = false;
-            })
-            .catch(error => {
-                showStatus('Error: ' + error.message, 'error');
-                generateBtn.disabled = false;
-            });
-        }
 
         const brailleParams = {
             diameter: 1.44,
@@ -694,16 +587,18 @@ barrierefreie Technologie</textarea>
             rowSize: 2,
             colSize: 3,
             bitmapSize: 6,
-            plateThickness: 2,
-            margin: 5
+            margin: 5,
+            dotHeight: 0.5,
+            dotSegments: 24
         };
 
         const binderHoleSpecs = {
-            'A5': [60, 60, 9, 6, 4],
-            'A6': [40, 40, 6, 5, 2],
-            'A7': [30, 30, 4.5, 4, 2],
-            'B5': [80, 80, 12, 6, 4],
-            'Custom': [50, 50, 8, 6, 2]
+            A4: [12, 80, 6],
+            A5: [12, 80, 6],
+            A6: [12, 80, 6],
+            A7: [6, 55, 4],
+            B5: [12, 80, 6],
+            Custom: [12, 80, 6]
         };
 
         const brailleMapSingleChar = {
@@ -719,17 +614,89 @@ barrierefreie Technologie</textarea>
         };
 
         const brailleMapDigits = {
-            'start': [0,1,0,1,1,1], '1': [1,0,0,0,0,0], '2': [1,0,1,0,0,0], '3': [1,1,0,0,0,0],
+            start: [0,1,0,1,1,1], '1': [1,0,0,0,0,0], '2': [1,0,1,0,0,0], '3': [1,1,0,0,0,0],
             '4': [1,1,0,1,0,0], '5': [1,0,0,1,0,0], '6': [1,1,1,0,0,0], '7': [1,1,1,1,0,0],
             '8': [1,0,1,1,0,0], '9': [0,1,1,0,0,0], '0': [0,1,1,1,0,0]
         };
 
         const brailleMapDoubleChar = {
-            'st': [0,1,1,1,1,1], 'au': [1,0,0,0,0,1], 'eu': [1,0,1,0,0,1],
-            'ei': [1,1,0,0,0,1], 'ch': [1,1,0,1,0,1], 'äu': [0,1,0,0,1,0], 'ie': [0,1,0,0,1,1]
+            st: [0,1,1,1,1,1], au: [1,0,0,0,0,1], eu: [1,0,1,0,0,1],
+            ei: [1,1,0,0,0,1], ch: [1,1,0,1,0,1], 'äu': [0,1,0,0,1,0], ie: [0,1,0,0,1,1]
         };
 
-        const brailleMapTripleChar = { 'sch': [1,0,0,1,0,1] };
+        const brailleMapTripleChar = { sch: [1,0,0,1,0,1] };
+
+        function initThreeJS() {
+            const canvas = document.getElementById('canvas');
+            camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 2000);
+            camera.position.set(0, 0, 250);
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf5f5f5);
+
+            renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+
+            const keyLight = new THREE.DirectionalLight(0xffffff, 0.85);
+            keyLight.position.set(120, 120, 180);
+            scene.add(keyLight);
+
+            const fillLight = new THREE.DirectionalLight(0xffffff, 0.35);
+            fillLight.position.set(-100, -120, 80);
+            scene.add(fillLight);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
+            scene.add(ambientLight);
+
+            setupMouseControls();
+            animate();
+        }
+
+        function setupMouseControls() {
+            let isDragging = false;
+            let previousMousePosition = { x: 0, y: 0 };
+            const canvas = document.getElementById('canvas');
+
+            canvas.addEventListener('mousedown', (event) => {
+                isDragging = true;
+                previousMousePosition = { x: event.clientX, y: event.clientY };
+            });
+
+            canvas.addEventListener('mousemove', (event) => {
+                if (!isDragging || !brailleModel) return;
+
+                const deltaX = event.clientX - previousMousePosition.x;
+                const deltaY = event.clientY - previousMousePosition.y;
+                brailleModel.rotation.y += deltaX * 0.01;
+                brailleModel.rotation.x += deltaY * 0.01;
+                previousMousePosition = { x: event.clientX, y: event.clientY };
+            });
+
+            canvas.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+
+            canvas.addEventListener('mouseleave', () => {
+                isDragging = false;
+            });
+
+            canvas.addEventListener('wheel', (event) => {
+                event.preventDefault();
+                camera.position.z = Math.max(60, Math.min(700, camera.position.z + event.deltaY * 0.12));
+            });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+
+        function showStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.innerHTML = message;
+            statusEl.className = 'status ' + type;
+        }
 
         function locX(loc) {
             return Math.floor(loc / brailleParams.rowSize) * brailleParams.spacing + brailleParams.spacing;
@@ -739,56 +706,96 @@ barrierefreie Technologie</textarea>
             return (loc % brailleParams.rowSize) * brailleParams.spacing + (brailleParams.distance - brailleParams.spacing) / 2;
         }
 
+        function getBinderHoleReservedMargin(pageSize) {
+            const spec = binderHoleSpecs[pageSize] || binderHoleSpecs.Custom;
+            return spec[0] + (spec[2] / 2) + 4;
+        }
+
+        function getBinderHoleLayout(pageSize, targetWidth, targetHeight, binderHoleSide) {
+            const spec = binderHoleSpecs[pageSize] || binderHoleSpecs.Custom;
+            const edgeOffset = spec[0];
+            const holeSpacing = spec[1];
+            const holeDiameter = spec[2];
+            const longSideIsVertical = targetHeight >= targetWidth;
+            const useLongSide = binderHoleSide === 'long';
+            const placeOnLeftEdge = useLongSide ? longSideIsVertical : !longSideIsVertical;
+
+            if (!placeOnLeftEdge) {
+                const y = targetHeight - edgeOffset;
+                return {
+                    holeDiameter,
+                    side: 'top',
+                    positions: [
+                        [targetWidth / 2 - holeSpacing / 2, y],
+                        [targetWidth / 2 + holeSpacing / 2, y]
+                    ]
+                };
+            }
+
+            const x = edgeOffset;
+            return {
+                holeDiameter,
+                side: 'left',
+                positions: [
+                    [x, targetHeight / 2 - holeSpacing / 2],
+                    [x, targetHeight / 2 + holeSpacing / 2]
+                ]
+            };
+        }
+
         function createBrailleLetter(bitmap, dotMaterial) {
             const group = new THREE.Group();
+            const dotBaseGeometry = new THREE.SphereGeometry(
+                brailleParams.diameter / 2,
+                brailleParams.dotSegments,
+                brailleParams.dotSegments
+            );
+            dotBaseGeometry.scale(1, 1, brailleParams.dotHeight / (brailleParams.diameter / 2));
+
             for (let loc = 0; loc < brailleParams.bitmapSize; loc++) {
-                if (bitmap[loc] === 1) {
-                    const sphere = new THREE.Mesh(
-                        new THREE.SphereGeometry(brailleParams.diameter / 2, 16, 16),
-                        dotMaterial
-                    );
-                    sphere.position.set(locX(loc), locY(loc), brailleParams.diameter / 2);
-                    group.add(sphere);
-                }
+                if (bitmap[loc] !== 1) continue;
+                const dot = new THREE.Mesh(dotBaseGeometry.clone(), dotMaterial);
+                dot.position.set(locX(loc), locY(loc), 0);
+                group.add(dot);
             }
+
             return group;
         }
 
         function findDots(line, prevChar) {
             const retval = { consumed: 0, bitmaps: [] };
 
-            if (prevChar && brailleMapDigits[prevChar]) {
+            if (prevChar && Object.prototype.hasOwnProperty.call(brailleMapDigits, prevChar)) {
                 retval.bitmaps.push([0,0,0,0,0,0]);
             }
 
             const lower = line.toLowerCase();
 
-            if (lower.length >= 3 && brailleMapTripleChar[lower.substr(0,3)]) {
+            if (lower.length >= 3 && brailleMapTripleChar[lower.substr(0, 3)]) {
                 retval.consumed = 3;
-                retval.bitmaps.push(brailleMapTripleChar[lower.substr(0,3)]);
+                retval.bitmaps.push(brailleMapTripleChar[lower.substr(0, 3)]);
                 return retval;
             }
 
-            if (lower.length >= 2 && brailleMapDoubleChar[lower.substr(0,2)]) {
+            if (lower.length >= 2 && brailleMapDoubleChar[lower.substr(0, 2)]) {
                 retval.consumed = 2;
-                retval.bitmaps.push(brailleMapDoubleChar[lower.substr(0,2)]);
+                retval.bitmaps.push(brailleMapDoubleChar[lower.substr(0, 2)]);
                 return retval;
             }
 
-            if (lower.length >= 1 && brailleMapSingleChar[lower.substr(0,1)]) {
+            if (lower.length >= 1 && brailleMapSingleChar[lower.substr(0, 1)]) {
                 retval.consumed = 1;
-                retval.bitmaps.push(brailleMapSingleChar[lower.substr(0,1)]);
+                retval.bitmaps.push(brailleMapSingleChar[lower.substr(0, 1)]);
                 return retval;
             }
 
-            if (lower.length >= 1 && brailleMapDigits[lower.substr(0,1)]) {
+            if (lower.length >= 1 && brailleMapDigits[lower.substr(0, 1)]) {
+                retval.consumed = 1;
                 if (prevChar && brailleMapDigits[prevChar]) {
-                    retval.consumed = 1;
-                    retval.bitmaps.push(brailleMapDigits[lower.substr(0,1)]);
+                    retval.bitmaps.push(brailleMapDigits[lower.substr(0, 1)]);
                 } else {
-                    retval.consumed = 1;
-                    retval.bitmaps.push(brailleMapDigits['start']);
-                    retval.bitmaps.push(brailleMapDigits[lower.substr(0,1)]);
+                    retval.bitmaps.push(brailleMapDigits.start);
+                    retval.bitmaps.push(brailleMapDigits[lower.substr(0, 1)]);
                 }
                 return retval;
             }
@@ -811,7 +818,7 @@ barrierefreie Technologie</textarea>
                     continue;
                 }
 
-                bitmaps.forEach(bitmap => {
+                bitmaps.forEach((bitmap) => {
                     const letterGroup = createBrailleLetter(bitmap, dotMaterial);
                     letterGroup.position.set(0, distIndex * brailleParams.distance, 0);
                     lineGroup.add(letterGroup);
@@ -829,22 +836,17 @@ barrierefreie Technologie</textarea>
         }
 
         function createBrailleText(text, dotMaterial) {
-            console.log('createBrailleText called with text:', text);
             const lines = text.split('\n');
-            console.log('Lines:', lines);
             const group = new THREE.Group();
             let maxWidth = 0;
 
             lines.forEach((line, lineIndex) => {
-                console.log('Processing line:', lineIndex, line);
                 const lineData = createBrailleLine(line, dotMaterial);
-                console.log('Line data:', lineData);
                 lineData.group.position.set(lineIndex * brailleParams.plateHeight, 0, 0);
                 group.add(lineData.group);
                 maxWidth = Math.max(maxWidth, lineData.width);
             });
 
-            console.log('Final braille text group children:', group.children.length);
             return {
                 group,
                 width: maxWidth,
@@ -852,35 +854,288 @@ barrierefreie Technologie</textarea>
             };
         }
 
-        function createBinderHoleMarkers(pageSize, targetWidth, targetHeight, holeMaterial, landscape, plateThickness) {
-            const spec = binderHoleSpecs[pageSize] || binderHoleSpecs['Custom'];
-            const [distanceFromBottom, holeSpacing, startFromLeft, holeDiameter, numHoles] = spec;
+        function createReadingMarkerPlacement(targetWidth, targetHeight, plateThickness, readingEdgeSide, readingMarkerPosition, readingMarkerLength, textStartX, textStartTop) {
+            const markerLength = Math.max(4, Math.min(readingMarkerLength, Math.max(targetWidth, targetHeight) * 0.5));
+            const centerX = targetWidth / 2;
+            const centerY = targetHeight / 2;
 
-            const holes = new THREE.Group();
-            for (let i = 0; i < numHoles; i++) {
-                let x = startFromLeft + (i * holeSpacing);
-                let y = distanceFromBottom;
-
-                if (landscape) {
-                    [x, y] = [y, x];
+            function topAt(startX) {
+                let x0 = Math.max(0, Math.min(startX, targetWidth));
+                let x1 = Math.min(targetWidth, x0 + markerLength);
+                if (x1 - x0 < markerLength) {
+                    x0 = Math.max(0, targetWidth - markerLength);
+                    x1 = targetWidth;
                 }
-
-                if (x + holeDiameter / 2 < targetWidth && y + holeDiameter / 2 < targetHeight) {
-                    const hole = new THREE.Mesh(
-                        new THREE.CylinderGeometry(holeDiameter / 2, holeDiameter / 2, plateThickness + 2, 24),
-                        holeMaterial
-                    );
-                    hole.rotation.x = Math.PI / 2;
-                    hole.position.set(x, y, -plateThickness / 2);
-                    holes.add(hole);
-                }
+                return { side: 'top', x0, x1, y0: targetHeight - plateThickness, y1: targetHeight };
             }
 
-            return holes;
+            function bottomAt(startX) {
+                let x0 = Math.max(0, Math.min(startX, targetWidth));
+                let x1 = Math.min(targetWidth, x0 + markerLength);
+                if (x1 - x0 < markerLength) {
+                    x0 = Math.max(0, targetWidth - markerLength);
+                    x1 = targetWidth;
+                }
+                return { side: 'bottom', x0, x1, y0: 0, y1: plateThickness };
+            }
+
+            function leftAt(topY) {
+                let y1 = Math.max(0, Math.min(topY, targetHeight));
+                let y0 = Math.max(0, y1 - markerLength);
+                if (y1 - y0 < markerLength) {
+                    y1 = targetHeight;
+                    y0 = Math.max(0, targetHeight - markerLength);
+                }
+                return { side: 'left', x0: 0, x1: plateThickness, y0, y1 };
+            }
+
+            function rightAt(topY) {
+                let y1 = Math.max(0, Math.min(topY, targetHeight));
+                let y0 = Math.max(0, y1 - markerLength);
+                if (y1 - y0 < markerLength) {
+                    y1 = targetHeight;
+                    y0 = Math.max(0, targetHeight - markerLength);
+                }
+                return { side: 'right', x0: targetWidth - plateThickness, x1: targetWidth, y0, y1 };
+            }
+
+            switch (readingMarkerPosition) {
+                case 'top-left':
+                    return topAt(0);
+                case 'top-center':
+                    return topAt(centerX - markerLength / 2);
+                case 'top-right':
+                    return topAt(targetWidth - markerLength);
+                case 'left-center':
+                    return leftAt(centerY + markerLength / 2);
+                case 'right-center':
+                    return rightAt(centerY + markerLength / 2);
+                case 'bottom-left':
+                    return bottomAt(0);
+                case 'bottom-center':
+                    return bottomAt(centerX - markerLength / 2);
+                case 'bottom-right':
+                    return bottomAt(targetWidth - markerLength);
+                case 'text-start':
+                default:
+                    if (readingEdgeSide === 'top') {
+                        return topAt(textStartX);
+                    }
+                    return leftAt(textStartTop);
+            }
         }
 
-        function generateBrailleGeometry(text, pageSize, customWidth, customHeight, backPlate, supportPlate, binderHoles, landscape, alignX, alignY, offsetX, offsetY, plateThickness) {
-            let baseWidth, baseHeight;
+        function createPerforatedPlateGeometry(targetWidth, targetHeight, plateThickness, holeLayout, markerPlacement) {
+            const plateShape = new THREE.Shape();
+            plateShape.moveTo(0, 0);
+            plateShape.lineTo(targetWidth, 0);
+            plateShape.lineTo(targetWidth, targetHeight);
+            plateShape.lineTo(0, targetHeight);
+            plateShape.lineTo(0, 0);
+
+            if (holeLayout && holeLayout.positions) {
+                holeLayout.positions.forEach(([x, y]) => {
+                    const hole = new THREE.Path();
+                    hole.absellipse(x, y, holeLayout.holeDiameter / 2, holeLayout.holeDiameter / 2, 0, Math.PI * 2, false, 0);
+                    plateShape.holes.push(hole);
+                });
+            }
+
+            if (markerPlacement) {
+                const notch = new THREE.Path();
+
+                if (markerPlacement.side === 'top') {
+                    notch.moveTo(markerPlacement.x0, markerPlacement.y0);
+                    notch.lineTo(markerPlacement.x1, markerPlacement.y0);
+                    notch.lineTo(markerPlacement.x1, markerPlacement.y1);
+                    notch.lineTo(markerPlacement.x0, markerPlacement.y1);
+                } else {
+                    notch.moveTo(markerPlacement.x0, markerPlacement.y0);
+                    notch.lineTo(markerPlacement.x1, markerPlacement.y0);
+                    notch.lineTo(markerPlacement.x1, markerPlacement.y1);
+                    notch.lineTo(markerPlacement.x0, markerPlacement.y1);
+                }
+                plateShape.holes.push(notch);
+            }
+
+            const geometry = new THREE.ExtrudeGeometry(plateShape, {
+                depth: plateThickness,
+                bevelEnabled: false,
+                steps: 1,
+                curveSegments: 36
+            });
+            geometry.translate(0, 0, -plateThickness);
+
+            geometry.computeVertexNormals();
+            return geometry;
+        }
+
+        function createReadingMarkerChamferMesh(markerPlacement, plateThickness, plateMaterial) {
+            if (!markerPlacement) return null;
+
+            let points;
+            if (markerPlacement.side === 'top') {
+                points = [
+                    [markerPlacement.x0, markerPlacement.y0, 0],
+                    [markerPlacement.x0, markerPlacement.y1, -plateThickness],
+                    [markerPlacement.x0, markerPlacement.y0, -plateThickness],
+                    [markerPlacement.x1, markerPlacement.y0, 0],
+                    [markerPlacement.x1, markerPlacement.y1, -plateThickness],
+                    [markerPlacement.x1, markerPlacement.y0, -plateThickness]
+                ];
+            } else if (markerPlacement.side === 'bottom') {
+                points = [
+                    [markerPlacement.x0, markerPlacement.y1, 0],
+                    [markerPlacement.x0, markerPlacement.y0, -plateThickness],
+                    [markerPlacement.x0, markerPlacement.y1, -plateThickness],
+                    [markerPlacement.x1, markerPlacement.y1, 0],
+                    [markerPlacement.x1, markerPlacement.y0, -plateThickness],
+                    [markerPlacement.x1, markerPlacement.y1, -plateThickness]
+                ];
+            } else if (markerPlacement.side === 'right') {
+                points = [
+                    [markerPlacement.x0, markerPlacement.y1, 0],
+                    [markerPlacement.x1, markerPlacement.y1, -plateThickness],
+                    [markerPlacement.x0, markerPlacement.y1, -plateThickness],
+                    [markerPlacement.x0, markerPlacement.y0, 0],
+                    [markerPlacement.x1, markerPlacement.y0, -plateThickness],
+                    [markerPlacement.x0, markerPlacement.y0, -plateThickness]
+                ];
+            } else {
+                points = [
+                    [markerPlacement.x1, markerPlacement.y1, 0],
+                    [markerPlacement.x0, markerPlacement.y1, -plateThickness],
+                    [markerPlacement.x1, markerPlacement.y1, -plateThickness],
+                    [markerPlacement.x1, markerPlacement.y0, 0],
+                    [markerPlacement.x0, markerPlacement.y0, -plateThickness],
+                    [markerPlacement.x1, markerPlacement.y0, -plateThickness]
+                ];
+            }
+
+            const faces = [
+                [0, 1, 2],
+                [3, 5, 4],
+                [0, 3, 4], [0, 4, 1],
+                [1, 4, 5], [1, 5, 2],
+                [2, 5, 3], [2, 3, 0]
+            ];
+
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(points.flat(), 3));
+            geometry.setIndex(faces.flat());
+            geometry.computeVertexNormals();
+            return new THREE.Mesh(geometry, plateMaterial);
+        }
+
+        function createPlateMesh(targetWidth, targetHeight, plateThickness, readingEdgeChamfer, readingEdgeSide, readingMarkerPosition, readingMarkerLength, plateMaterial, holeLayout, textStartX, textStartTop) {
+            if (!holeLayout && !readingEdgeChamfer) {
+                const geometry = new THREE.BoxGeometry(targetWidth, targetHeight, plateThickness);
+                const mesh = new THREE.Mesh(geometry, plateMaterial);
+                mesh.position.set(targetWidth / 2, targetHeight / 2, -plateThickness / 2);
+                return mesh;
+            }
+
+            const plateGroup = new THREE.Group();
+            const markerPlacement = readingEdgeChamfer
+                ? createReadingMarkerPlacement(targetWidth, targetHeight, plateThickness, readingEdgeSide, readingMarkerPosition, readingMarkerLength, textStartX, textStartTop)
+                : null;
+
+            const geometry = createPerforatedPlateGeometry(
+                targetWidth,
+                targetHeight,
+                plateThickness,
+                holeLayout,
+                markerPlacement
+            );
+            plateGroup.add(new THREE.Mesh(geometry, plateMaterial));
+
+            if (readingEdgeChamfer) {
+                const markerMesh = createReadingMarkerChamferMesh(markerPlacement, plateThickness, plateMaterial);
+                if (markerMesh) plateGroup.add(markerMesh);
+            }
+
+            return plateGroup;
+        }
+
+        function createSupportMeshes(targetWidth, targetHeight, plateMaterial) {
+            const supports = new THREE.Group();
+
+            const support1 = new THREE.Mesh(new THREE.BoxGeometry(2, 5, 20), plateMaterial);
+            support1.position.set(targetWidth - 1, 5, -10);
+            supports.add(support1);
+
+            const support2 = new THREE.Mesh(new THREE.BoxGeometry(2, 5, 20), plateMaterial);
+            support2.position.set(targetWidth - 1, targetHeight - 5, -10);
+            supports.add(support2);
+
+            return supports;
+        }
+
+        function countVertices(object) {
+            let count = 0;
+            object.traverse((child) => {
+                if (child.isMesh && child.geometry?.attributes?.position) {
+                    count += child.geometry.attributes.position.count;
+                }
+            });
+            return count;
+        }
+
+        function collectTrianglesFromObject(object) {
+            const triangles = [];
+            object.updateMatrixWorld(true);
+
+            object.traverse((child) => {
+                if (!child.isMesh || !child.geometry?.attributes?.position) return;
+
+                let geometry = child.geometry.clone();
+                if (geometry.index) {
+                    geometry = geometry.toNonIndexed();
+                }
+                geometry.applyMatrix4(child.matrixWorld);
+
+                const vertices = geometry.attributes.position.array;
+                for (let index = 0; index < vertices.length; index += 9) {
+                    triangles.push([
+                        [vertices[index], vertices[index + 1], vertices[index + 2]],
+                        [vertices[index + 3], vertices[index + 4], vertices[index + 5]],
+                        [vertices[index + 6], vertices[index + 7], vertices[index + 8]]
+                    ]);
+                }
+            });
+
+            return triangles;
+        }
+
+        function exportObjectToSTL(object) {
+            const exporter = new STLExporter();
+            return exporter.trianglesToSTL(collectTrianglesFromObject(object));
+        }
+
+        function generateBrailleGeometry(options) {
+            const {
+                text,
+                pageSize,
+                customWidth,
+                customHeight,
+                backPlate,
+                supportPlate,
+                binderHoles,
+                binderHoleSide,
+                readingEdgeChamfer,
+                readingEdgeSide,
+                readingMarkerPosition,
+                readingMarkerLength,
+                landscape,
+                alignX,
+                alignY,
+                offsetX,
+                offsetY,
+                plateThickness
+            } = options;
+
+            let baseWidth;
+            let baseHeight;
             if (pageSize === 'Custom') {
                 baseWidth = customWidth;
                 baseHeight = customHeight;
@@ -890,110 +1145,89 @@ barrierefreie Technologie</textarea>
 
             const targetWidth = landscape ? baseHeight : baseWidth;
             const targetHeight = landscape ? baseWidth : baseHeight;
+            const holeLayout = binderHoles ? getBinderHoleLayout(pageSize, targetWidth, targetHeight, binderHoleSide) : null;
 
-            const dotMaterial = new THREE.MeshPhongMaterial({ color: 0x333333, shininess: 50 });
-            const plateMaterial = new THREE.MeshPhongMaterial({ color: 0x777777, shininess: 20 });
+            const dotMaterial = new THREE.MeshPhongMaterial({ color: 0x2f2f2f, shininess: 90, specular: 0x777777 });
+            const plateMaterial = new THREE.MeshPhongMaterial({ color: 0x8a8a8a, shininess: 24 });
 
+            const modelGroup = new THREE.Group();
             const brailleData = createBrailleText(text.toLowerCase(), dotMaterial);
-            const maxContentWidth = Math.max(1, targetWidth - 2 * brailleParams.margin);
-            const maxContentHeight = Math.max(1, targetHeight - 2 * brailleParams.margin);
 
-            const unscaledBounds = new THREE.Box3().setFromObject(brailleData.group);
-            const unscaledSize = unscaledBounds.getSize(new THREE.Vector3());
-            const scale = Math.min(1, maxContentWidth / Math.max(1, unscaledSize.x), maxContentHeight / Math.max(1, unscaledSize.y));
+            let leftMargin = brailleParams.margin;
+            let rightMargin = brailleParams.margin;
+            let topMargin = brailleParams.margin;
+            let bottomMargin = brailleParams.margin;
+
+            if (binderHoles && backPlate) {
+                const binderMargin = getBinderHoleReservedMargin(pageSize);
+                if (holeLayout.side === 'top') {
+                    topMargin += binderMargin;
+                } else {
+                    leftMargin += binderMargin;
+                }
+            }
+
+            if (readingEdgeChamfer && backPlate) {
+                const chamferMargin = plateThickness + 1;
+                if (readingEdgeSide === 'top') {
+                    topMargin += chamferMargin;
+                } else {
+                    leftMargin += chamferMargin;
+                }
+            }
+
+            const originalBounds = new THREE.Box3().setFromObject(brailleData.group);
+            const originalSize = originalBounds.getSize(new THREE.Vector3());
+            const printableWidth = Math.max(1, targetWidth - leftMargin - rightMargin);
+            const printableHeight = Math.max(1, targetHeight - topMargin - bottomMargin);
+            const scale = Math.min(
+                1,
+                printableWidth / Math.max(1, originalSize.x),
+                printableHeight / Math.max(1, originalSize.y)
+            );
+
             brailleData.group.scale.set(scale, scale, 1);
 
-            // Align using the actual text bounds so alignment always targets text, not plate/group origin.
-            const textBounds = new THREE.Box3().setFromObject(brailleData.group);
-            const textSize = textBounds.getSize(new THREE.Vector3());
+            const scaledBounds = new THREE.Box3().setFromObject(brailleData.group);
+            const scaledSize = scaledBounds.getSize(new THREE.Vector3());
+            const remainingWidth = Math.max(0, printableWidth - scaledSize.x);
+            const remainingHeight = Math.max(0, printableHeight - scaledSize.y);
 
-            const availableX = Math.max(0, targetWidth - 2 * brailleParams.margin - textSize.x);
-            const availableY = Math.max(0, targetHeight - 2 * brailleParams.margin - textSize.y);
+            let minX = leftMargin;
+            if (alignX === 'center') minX += remainingWidth / 2;
+            else if (alignX === 'right') minX += remainingWidth;
 
-            let alignedMinX = brailleParams.margin;
-            if (alignX === 'center') alignedMinX += availableX / 2;
-            else if (alignX === 'right') alignedMinX += availableX;
+            let minY = bottomMargin;
+            if (alignY === 'center') minY += remainingHeight / 2;
+            else if (alignY === 'top') minY += remainingHeight;
 
-            let alignedMinY = brailleParams.margin;
-            if (alignY === 'center') alignedMinY += availableY / 2;
-            else if (alignY === 'top') alignedMinY += availableY;
+            brailleData.group.position.set(
+                minX + offsetX - scaledBounds.min.x,
+                minY + offsetY - scaledBounds.min.y,
+                0
+            );
 
-            const deltaX = alignedMinX + offsetX - textBounds.min.x;
-            const deltaY = alignedMinY + offsetY - textBounds.min.y;
-            brailleData.group.position.set(deltaX, deltaY, 0);
-
-            const modelGroup = new THREE.Group();
-
-            if (backPlate) {
-                const plate = new THREE.Mesh(
-                    new THREE.BoxGeometry(targetWidth, targetHeight, plateThickness),
-                    plateMaterial
-                );
-                plate.position.set(targetWidth / 2, targetHeight / 2, -plateThickness / 2);
-                modelGroup.add(plate);
-
-                if (supportPlate) {
-                    const support1 = new THREE.Mesh(new THREE.BoxGeometry(2, 5, 20), plateMaterial);
-                    support1.position.set(targetWidth - 1, 5, -10);
-                    modelGroup.add(support1);
-
-                    const support2 = new THREE.Mesh(new THREE.BoxGeometry(2, 5, 20), plateMaterial);
-                    support2.position.set(targetWidth - 1, targetHeight - 5, -10);
-                    modelGroup.add(support2);
-                }
-
-                if (binderHoles) {
-                    const holeMaterial = new THREE.MeshPhongMaterial({ color: 0x101010, emissive: 0x000000, opacity: 0.8, transparent: true });
-                    const holes = createBinderHoleMarkers(pageSize, targetWidth, targetHeight, holeMaterial, landscape, plateThickness);
-                    modelGroup.add(holes);
-                }
-            }
-
-            modelGroup.add(brailleData.group);
-
-            if (landscape) {
-                modelGroup.rotation.z = -Math.PI / 2;
-                modelGroup.updateMatrixWorld();
-            }
-
-            return modelGroup;
-        }
-
-        function displayModel(modelObject) {
-
-            let textY = brailleParams.margin;
-            if (alignY === 'center') textY += Math.max(0, availableHeight / 2);
-            else if (alignY === 'top') textY += Math.max(0, availableHeight);
-
-            textX += offsetX;
-            textY += offsetY;
-
-            brailleData.group.position.set(textX, textY, 0);
-
-            const modelGroup = new THREE.Group();
+            const placedTextBounds = new THREE.Box3().setFromObject(brailleData.group);
+            const textStartX = placedTextBounds.min.x;
+            const textStartTop = placedTextBounds.max.y;
 
             if (backPlate) {
-                const plate = new THREE.Mesh(
-                    new THREE.BoxGeometry(targetWidth, targetHeight, brailleParams.plateThickness),
-                    plateMaterial
-                );
-                plate.position.set(targetWidth / 2, targetHeight / 2, -brailleParams.plateThickness / 2);
-                modelGroup.add(plate);
+                modelGroup.add(createPlateMesh(
+                    targetWidth,
+                    targetHeight,
+                    plateThickness,
+                    readingEdgeChamfer,
+                    readingEdgeSide,
+                    readingMarkerPosition,
+                    readingMarkerLength,
+                    plateMaterial,
+                    binderHoles ? holeLayout : null,
+                    textStartX,
+                    textStartTop
+                ));
 
                 if (supportPlate) {
-                    const support1 = new THREE.Mesh(new THREE.BoxGeometry(2, 5, 20), plateMaterial);
-                    support1.position.set(targetWidth - 1, 5, -10);
-                    modelGroup.add(support1);
-
-                    const support2 = new THREE.Mesh(new THREE.BoxGeometry(2, 5, 20), plateMaterial);
-                    support2.position.set(targetWidth - 1, targetHeight - 5, -10);
-                    modelGroup.add(support2);
-                }
-
-                if (binderHoles) {
-                    const holeMaterial = new THREE.MeshPhongMaterial({ color: 0x101010, transparent: true, opacity: 0.85 });
-                    const holeMarkers = createBinderHoleMarkers(pageSize, targetWidth, targetHeight, holeMaterial);
-                    modelGroup.add(holeMarkers);
+                    modelGroup.add(createSupportMeshes(targetWidth, targetHeight, plateMaterial));
                 }
             }
 
@@ -1009,51 +1243,78 @@ barrierefreie Technologie</textarea>
             brailleModel = modelObject;
             scene.add(brailleModel);
 
-            // Simple camera positioning - center the model and position camera to see it
             const box = new THREE.Box3().setFromObject(brailleModel);
             const center = box.getCenter(new THREE.Vector3());
             const size = box.getSize(new THREE.Vector3());
 
-            // Center the model
-            brailleModel.position.x = -center.x;
-            brailleModel.position.y = -center.y;
-            brailleModel.position.z = -center.z;
+            brailleModel.position.set(-center.x, -center.y, -center.z);
 
-            // Position camera to see the entire model
-            const maxDim = Math.max(size.x, size.y, size.z);
-            const distance = maxDim * 2; // Distance from model
-            camera.position.set(0, 0, distance);
+            const maxDimension = Math.max(size.x, size.y, size.z);
+            camera.position.set(0, 0, Math.max(120, maxDimension * 2.2));
             camera.lookAt(0, 0, 0);
         }
 
-        function countVertices(object) {
-            let count = 0;
-
-            if (object.isMesh && object.geometry && object.geometry.attributes && object.geometry.attributes.position) {
-                count += object.geometry.attributes.position.count;
-            }
-
-            if (object.children && object.children.length) {
-                object.children.forEach(child => {
-                    count += countVertices(child);
-                });
-            }
-
-            return count;
-        }
-
         function updatePreviewInfo(modelObject, fileSize = 0) {
-            const vertices = countVertices(modelObject);
             const previewInfo = document.getElementById('previewInfo');
-            document.getElementById('infoVertices').textContent = vertices.toLocaleString();
-            if (fileSize > 0) {
-                document.getElementById('infoSize').textContent = (fileSize / 1024).toFixed(2) + ' KB';
-            }
+            document.getElementById('infoStatus').textContent = 'Ready';
+            document.getElementById('infoVertices').textContent = countVertices(modelObject).toLocaleString();
+            document.getElementById('infoSize').textContent = fileSize > 0 ? `${(fileSize / 1024).toFixed(2)} KB` : '0 bytes';
             previewInfo.style.display = 'block';
         }
 
+        function getCurrentOptions() {
+            return {
+                text: document.getElementById('textInput').value,
+                pageSize: document.getElementById('pageSize').value,
+                customWidth: parseFloat(document.getElementById('customWidth').value),
+                customHeight: parseFloat(document.getElementById('customHeight').value),
+                backPlate: document.getElementById('backPlate').checked,
+                supportPlate: document.getElementById('supportPlate').checked,
+                binderHoles: document.getElementById('binderHoles').checked,
+                binderHoleSide: document.getElementById('binderHoleSide').value,
+                readingEdgeChamfer: document.getElementById('readingEdgeChamfer').checked,
+                readingEdgeSide: document.getElementById('readingEdgeSide').value,
+                readingMarkerPosition: document.getElementById('readingMarkerPosition').value,
+                readingMarkerLength: Math.max(4, parseFloat(document.getElementById('readingMarkerLength').value) || 14),
+                landscape: document.getElementById('landscape').checked,
+                alignX: document.getElementById('alignX').value,
+                alignY: document.getElementById('alignY').value,
+                offsetX: parseFloat(document.getElementById('offsetX').value) || 0,
+                offsetY: parseFloat(document.getElementById('offsetY').value) || 0,
+                plateThickness: Math.max(0.5, parseFloat(document.getElementById('plateThickness').value) || 2)
+            };
+        }
+
+        function generateBraille() {
+            const options = getCurrentOptions();
+            if (!options.text.trim()) {
+                showStatus('Please enter some text!', 'error');
+                return;
+            }
+
+            const generateBtn = document.getElementById('generateBtn');
+            generateBtn.disabled = true;
+            showStatus('<span class="spinner"></span> Generating 3D model...', 'info');
+
+            window.requestAnimationFrame(() => {
+                try {
+                    const model = generateBrailleGeometry(options);
+                    displayModel(model);
+                    window.currentSTLBuffer = exportObjectToSTL(model);
+                    window.currentSTLFile = `braille-plate-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.stl`;
+                    document.getElementById('downloadBtn').disabled = false;
+                    updatePreviewInfo(model, window.currentSTLBuffer.byteLength);
+                    showStatus('✓ Model generated successfully!', 'success');
+                } catch (error) {
+                    showStatus(`Error: ${error.message}`, 'error');
+                } finally {
+                    generateBtn.disabled = false;
+                }
+            });
+        }
+
         function downloadSTL() {
-            if (!brailleModel) {
+            if (!window.currentSTLBuffer) {
                 showStatus('Please generate a model first!', 'error');
                 return;
             }
@@ -1062,63 +1323,77 @@ barrierefreie Technologie</textarea>
             downloadBtn.disabled = true;
 
             try {
-                // Download from server
-                if (window.currentSTLFile) {
-                    const url = '/download/' + encodeURIComponent(window.currentSTLFile);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = 'braille-plate-' + new Date().toISOString().slice(0, 10) + '.stl';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    showStatus('✓ STL file downloaded successfully!', 'success');
-                } else {
-                    showStatus('Error: No STL file available', 'error');
-                }
+                const blob = new Blob([window.currentSTLBuffer], { type: 'model/stl' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = window.currentSTLFile || 'braille-plate.stl';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                showStatus('✓ STL file downloaded successfully!', 'success');
             } catch (error) {
-                showStatus('Error downloading STL: ' + error.message, 'error');
+                showStatus(`Error downloading STL: ${error.message}`, 'error');
             } finally {
                 downloadBtn.disabled = false;
             }
         }
 
-        // Update custom size fields based on page size selection
-        document.getElementById('pageSize').addEventListener('change', (e) => {
-            if (e.target.value !== 'Custom') {
-                const [width, height] = pageSizes[e.target.value];
-                document.getElementById('customWidth').value = width;
-                document.getElementById('customHeight').value = height;
+        function syncDefaultBinderHoleSide() {
+            const pageSize = document.getElementById('pageSize').value;
+            const binderHoleSide = document.getElementById('binderHoleSide');
+
+            if (pageSize === 'A4' || pageSize === 'A5' || pageSize === 'A6') {
+                binderHoleSide.value = 'long';
             }
+        }
+
+        function syncReadingMarkerPresetFromInput() {
+            const lengthInput = document.getElementById('readingMarkerLength');
+            const presetSelect = document.getElementById('readingMarkerPreset');
+            const markerLength = Math.round(parseFloat(lengthInput.value) || 14);
+
+            if (markerLength === 8) {
+                presetSelect.value = '8';
+            } else if (markerLength === 14) {
+                presetSelect.value = '14';
+            } else {
+                presetSelect.value = 'custom';
+            }
+        }
+
+        function applyReadingMarkerPreset() {
+            const presetSelect = document.getElementById('readingMarkerPreset');
+            const lengthInput = document.getElementById('readingMarkerLength');
+            if (presetSelect.value === 'custom') return;
+            lengthInput.value = presetSelect.value;
+        }
+
+        document.getElementById('pageSize').addEventListener('change', (event) => {
+            if (event.target.value === 'Custom') return;
+            const [width, height] = pageSizes[event.target.value];
+            document.getElementById('customWidth').value = width;
+            document.getElementById('customHeight').value = height;
+            syncDefaultBinderHoleSide();
         });
 
-        // Initialize on page load
         window.addEventListener('load', () => {
             initThreeJS();
-            showStatus('Ready! Enter text and click "Generate 3D Model"', 'info');
-            
-            // Show/hide dot height input based on back plate checkbox
-            const backPlateCheckbox = document.getElementById('backPlate');
-            const dotHeightGroup = document.getElementById('dotHeightGroup');
-            
-            // Initial state - show dot height only if back plate is NOT checked
-            if (backPlateCheckbox.checked) {
-                dotHeightGroup.style.display = 'none';
-            } else {
-                dotHeightGroup.style.display = 'block';
-            }
-            
-            // Event listener for changes
-            backPlateCheckbox.addEventListener('change', (e) => {
-                console.log('BackPlate changed to:', e.target.checked);
-                if (e.target.checked) {
-                    dotHeightGroup.style.display = 'none';
-                } else {
-                    dotHeightGroup.style.display = 'block';
-                }
+            syncDefaultBinderHoleSide();
+            syncReadingMarkerPresetFromInput();
+
+            document.getElementById('readingMarkerPreset').addEventListener('change', () => {
+                applyReadingMarkerPreset();
             });
+
+            document.getElementById('readingMarkerLength').addEventListener('input', () => {
+                syncReadingMarkerPresetFromInput();
+            });
+
+            showStatus('Ready! Enter text and click "Generate 3D Model"', 'info');
         });
 
-        // Handle window resize
         window.addEventListener('resize', () => {
             const canvas = document.getElementById('canvas');
             const width = canvas.clientWidth;
